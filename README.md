@@ -193,3 +193,50 @@ For USB deployment:
 4. No system-wide installation required.
 
 **This is the most robust, efficient, and user-friendly version yet.**
+
+## Quick Environment Setup
+
+1. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   ```
+2. Activate it:
+   ```bash
+   source venv/bin/activate     # Linux/macOS
+   venv\Scripts\activate        # Windows
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usage Examples
+
+Launch the app:
+
+```bash
+python kyo_qa_tool_app.py
+```
+
+Run a sample job:
+
+```bash
+python scripts/sample_job.py --input test_data.json
+```
+
+## Testing & Linting
+
+- Run tests:
+  ```bash
+  pytest --maxfail=1 --disable-warnings -q
+  ```
+- Code style:
+  ```bash
+  black . && flake8
+  ```
+
+## Contribution Guidelines
+
+- **Branch naming**: `feature/<name>` or `bugfix/<id>`
+- **Commit message format**: `<type>(<scope>): <short description>`
+- **Pull requests**: link issues and request at least one reviewer.
