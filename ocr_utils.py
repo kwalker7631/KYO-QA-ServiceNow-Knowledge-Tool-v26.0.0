@@ -3,6 +3,7 @@ import fitz  # PyMuPDF
 import os
 from pathlib import Path
 import logging
+from logging_config import configure_logging
 from PIL import Image
 import io
 import sys
@@ -10,8 +11,7 @@ import cv2  # OpenCV for image processing
 import numpy as np
 
 # Set up basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("ocr_utils")
+logger = configure_logging("ocr_utils")
 
 # Global flag for Tesseract availability
 TESSERACT_AVAILABLE = False

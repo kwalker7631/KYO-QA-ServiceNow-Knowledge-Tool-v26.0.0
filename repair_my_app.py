@@ -4,9 +4,10 @@
 
 import os
 import logging
+from logging_config import configure_logging
 
 # Set up basic logging for this script
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logger = configure_logging(__name__)
 
 # ==============================================================================
 #  BEGIN DEFINITION OF ALL CORRECT FILE CONTENTS

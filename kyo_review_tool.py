@@ -5,11 +5,11 @@ from pathlib import Path
 import re
 import importlib
 import logging
+from logging_config import configure_logging
 import traceback
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("review_tool")
+logger = configure_logging("review_tool")
 
 # Try to import from config, with fallback
 try:

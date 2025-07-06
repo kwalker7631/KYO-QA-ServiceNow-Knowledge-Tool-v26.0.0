@@ -3,13 +3,13 @@ import shutil
 import time
 import json
 import logging
+from logging_config import configure_logging
 from pathlib import Path
 from datetime import datetime
 import traceback
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("processing_engine")
+logger = configure_logging("processing_engine")
 
 # Try to import required modules, with fallbacks where possible
 try:

@@ -4,6 +4,7 @@ import sys
 import shutil
 import tempfile
 import logging
+from logging_config import configure_logging
 import platform
 from tkinter import messagebox
 from pathlib import Path
@@ -11,8 +12,7 @@ import stat # Required for changing file attributes
 import zipfile # ADDED for zip extraction
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = configure_logging(__name__)
 
 def try_unlock_file(filepath: Path) -> bool:
     """

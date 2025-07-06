@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+from logging_config import configure_logging
 import os
 import subprocess
 import traceback
@@ -11,11 +12,7 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     Anthropic = None
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(module)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+configure_logging(__name__)
 
 if Anthropic:
     client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))

@@ -10,6 +10,7 @@ import shutil
 import time
 import threading
 import logging
+from logging_config import configure_logging
 import os
 import traceback
 
@@ -22,11 +23,7 @@ def safe_import_error_reporter():
     except ImportError:
         return None
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s [%(module)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+configure_logging("launcher")
 
 # --- Configuration ---
 VENV_DIR = Path(__file__).parent / "venv"
