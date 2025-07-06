@@ -26,3 +26,11 @@ class KyoceraColors:
     STATUS_WARNING = "#ffc107"        # Yellow for warnings
     STATUS_ERROR = "#dc3545"          # Red for errors
     STATUS_INFO_TEXT = "#0dcaf0"      # Cyan for informational link buttons
+
+    # Backwards compatibility aliases
+    BACKGROUND_WIDGET = WIDGET_BG
+    KYOCERA_BLACK = "#000000"
+    TEXT_PRIMARY = TEXT_DARK
+    TEXT_SECONDARY = TEXT_MUTED
+    PRIMARY_BLUE = PRIMARY_ACTION
+    STATUS_INFO = STATUS_INFO_TEXT
