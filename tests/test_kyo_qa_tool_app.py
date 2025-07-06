@@ -16,7 +16,7 @@ pytesseract_mod.image_to_string = lambda *a, **k: ""
 sys.modules.setdefault("pytesseract", pytesseract_mod)
 
 # Ensure any stubbed processing_engine from other tests is cleared
-sys.modules.pop("processing_engine", None)
+monkeypatch.delitem(sys.modules, "processing_engine", raising=False)
 
 import kyo_qa_tool_app  # noqa: E402
 
