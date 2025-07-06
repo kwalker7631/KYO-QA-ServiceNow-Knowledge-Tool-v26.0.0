@@ -1,58 +1,61 @@
+# config.py
+# Version: 28.0.0
+# Last modified: 2025-07-06
+
 import json
 import os
 import logging
-from pathlib import Path  # <-- Import Path
+from pathlib import Path
 from version import __version__
 from branding import KyoceraColors
 
 # Initialize logging
 logger = logging.getLogger('config')
 
-# --- Define all pattern variables with default empty values FIRST ---
+# --- Load Custom Patterns ---
+# Define pattern variables with default empty values first.
 MODEL_PATTERNS = []
 PART_NUMBER_PATTERNS = []
-SERIAL_NUMBER_PATTERNS = []
 QA_NUMBER_PATTERNS = []
-DOCUMENT_TYPE_PATTERNS = []
-DOCUMENT_TITLE_PATTERNS = []
-REVISION_PATTERNS = []
-LANGUAGE_PATTERNS = []
-EXCLUSION_PATTERNS = []
-UNWANTED_AUTHORS = []
-STANDARDIZATION_RULES = {}  # Rules are a dictionary
+# Add any other pattern types you need here.
 
-# --- Now, try to overwrite the defaults with values from custom_patterns.py ---
+# Now, try to overwrite the defaults with values from custom_patterns.py
 try:
     from custom_patterns import *
     logging.info("Successfully loaded custom patterns.")
-except ImportError as e:
-    logging.warning(f"Could not import from custom_patterns.py: {e}. Using default empty patterns.")
+except ImportError:
+    logging.warning("Could not import from custom_patterns.py. Using default empty patterns.")
 except Exception as e:
     logging.error(f"An unexpected error occurred while loading custom patterns: {e}")
 
 
-# --- FIX: Use Path objects for all directory constants ---
+# --- Directory Constants ---
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / 'output'
 LOGS_DIR = BASE_DIR / 'logs'
 ASSETS_DIR = BASE_DIR / 'assets'
 PDF_TXT_DIR = OUTPUT_DIR / 'pdf_texts'
 CACHE_DIR = BASE_DIR / 'cache'
-NEED_REVIEW_DIR = OUTPUT_DIR  # ADDED: Missing directory constant
+NEED_REVIEW_DIR = OUTPUT_DIR
 CONFIG_FILE = BASE_DIR / 'config.json'
 
 # --- GUI and App Color Configuration ---
+# FIXED: Updated to use the new color definitions from branding.py
 BRAND_COLORS = {
-    "background": KyoceraColors.LIGHT_GREY,
-    "header": KyoceraColors.DARK_GREY,
-    "purple": KyoceraColors.PURPLE,
-    "status_review": KyoceraColors.STATUS_ORANGE_LIGHT,
-    "status_pass": KyoceraColors.STATUS_GREEN_LIGHT,
-    "status_fail": KyoceraColors.STATUS_RED_LIGHT,
-    "status_ocr": KyoceraColors.STATUS_BLUE_LIGHT
+    "background": KyoceraColors.BACKGROUND_MAIN,
+    "widget_bg": KyoceraColors.BACKGROUND_WIDGET,
+    "header_bg": KyoceraColors.KYOCERA_BLACK,
+    "primary_text": KyoceraColors.TEXT_PRIMARY,
+    "secondary_text": KyoceraColors.TEXT_SECONDARY,
+    "kyocera_red": KyoceraColors.KYOCERA_RED,
+    "primary_blue": KyoceraColors.PRIMARY_BLUE,
+    "status_success": KyoceraColors.STATUS_SUCCESS,
+    "status_warning": KyoceraColors.STATUS_WARNING,
+    "status_error": KyoceraColors.STATUS_ERROR,
+    "status_info": KyoceraColors.STATUS_INFO,
 }
 
-# Column names
+# --- Column Names for Excel Processing ---
 STATUS_COLUMN_NAME = "Validation Status"
 DESCRIPTION_COLUMN_NAME = "description"
 META_COLUMN_NAME = "meta"

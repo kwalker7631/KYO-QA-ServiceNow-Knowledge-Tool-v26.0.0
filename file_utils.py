@@ -1,3 +1,4 @@
+# file_utils.py
 import os
 import sys
 import shutil
@@ -7,6 +8,7 @@ import platform
 from tkinter import messagebox
 from pathlib import Path
 import stat # Required for changing file attributes
+import zipfile # ADDED for zip extraction
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -127,6 +129,31 @@ def create_temp_working_dir():
     except Exception as e:
         logging.error(f"Failed to create temporary directory: {e}")
         messagebox.showerror("Error", f"Could not create a temporary working directory: {e}")
+        return None
+
+def extract_zip_to_temp(zip_path: Path) -> Path | None:
+    """
+    Extracts a zip file to a new temporary directory.
+    Returns the Path to the temporary directory, or None on failure.
+    """
+    temp_dir = create_temp_working_dir()
+    if not temp_dir:
+        return None
+    
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+        logging.info(f"Successfully extracted '{zip_path.name}' to '{temp_dir}'")
+        return temp_dir
+    except zipfile.BadZipFile:
+        logging.error(f"Error: '{zip_path.name}' is not a valid zip file.")
+        messagebox.showerror("Invalid File", f"'{zip_path.name}' is not a valid zip file.")
+        cleanup_directory(temp_dir)
+        return None
+    except Exception as e:
+        logging.error(f"Failed to extract zip file '{zip_path.name}': {e}")
+        messagebox.showerror("Extraction Error", f"Could not extract the zip file:\n{e}")
+        cleanup_directory(temp_dir)
         return None
 
 def cleanup_directory(directory_path):
