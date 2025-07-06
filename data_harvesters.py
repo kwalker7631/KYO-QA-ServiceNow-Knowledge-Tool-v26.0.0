@@ -2,11 +2,11 @@
 import re
 import importlib
 import logging
+from logging_config import configure_logging
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("harvesters")
+logger = configure_logging("harvesters")
 
 # Import from config with fallback values
 try:
