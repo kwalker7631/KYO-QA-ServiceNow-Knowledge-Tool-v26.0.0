@@ -2,6 +2,7 @@ import sys
 import json
 from pathlib import Path
 import types
+import threading
 from tests.openpyxl_stub import ensure_openpyxl_stub
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -14,9 +15,6 @@ sys.modules.setdefault("numpy", types.ModuleType("numpy"))
 pytesseract_mod = types.ModuleType("pytesseract")
 pytesseract_mod.image_to_string = lambda *a, **k: ""
 sys.modules.setdefault("pytesseract", pytesseract_mod)
-
-# Ensure any stubbed processing_engine from other tests is cleared
-monkeypatch.delitem(sys.modules, "processing_engine", raising=False)
 
 import kyo_qa_tool_app  # noqa: E402
 
@@ -63,4 +61,28 @@ def test_collect_review_pdfs(tmp_path, monkeypatch):
 
     result = app._collect_review_pdfs()
     assert result == [str(pdf)]
+
+
+class DummyVar:
+    def __init__(self):
+        self.value = ""
+
+    def set(self, val):
+        self.value = val
+
+
+def test_pause_resume_events(monkeypatch):
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app.pause_event = threading.Event()
+    app.cancel_event = threading.Event()
+    app.status_current_file = DummyVar()
+    app.log_message = lambda *a, **k: None
+
+    app.pause_processing()
+    assert app.pause_event.is_set()
+    assert app.status_current_file.value == "Processing paused"
+
+    app.resume_processing()
+    assert not app.pause_event.is_set()
+    assert app.status_current_file.value == "Resuming..."
 

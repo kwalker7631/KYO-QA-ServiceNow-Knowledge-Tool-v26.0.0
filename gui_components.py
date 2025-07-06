@@ -103,10 +103,13 @@ def create_live_status_section(parent, app):
     activity_frame = ttk.Frame(container, style='Card.TFrame')
     activity_frame.grid(row=0, column=0, sticky='ew', pady=(0, 15))
     activity_frame.columnconfigure(1, weight=1)
+    activity_frame.columnconfigure(2, weight=0)
     
     ttk.Label(activity_frame, text="Activity:", font=('Segoe UI', 11, 'bold'), style='Card.TLabel').grid(row=0, column=0, padx=10, pady=5)
     app.status_current_file = tk.StringVar(value="Waiting to start...")
     ttk.Label(activity_frame, textvariable=app.status_current_file, style='Card.TLabel', foreground=KyoceraColors.TEXT_MUTED).grid(row=0, column=1, sticky='ew')
+    app.spinner_label = ttk.Label(activity_frame, text="", width=2, style='Card.TLabel')
+    app.spinner_label.grid(row=0, column=2, padx=(5,0), sticky='w')
     
     app.progress_bar = ttk.Progressbar(activity_frame, variable=app.progress_value, mode='determinate')
     app.progress_bar.grid(row=1, column=0, columnspan=2, sticky='ew', padx=10, pady=(5,10))
