@@ -37,12 +37,7 @@ except ImportError:
     STATUS_COLUMN_NAME = "Processing Status"
     DESCRIPTION_COLUMN_NAME = "Short description"
 
-try:
-    from custom_exceptions import FileLockError
-except ImportError:
-    class FileLockError(Exception):
-        """Raised when a file is locked by another process."""
-        pass
+# FIXED: Removed unused FileLockError import
 
 try:
     from data_harvesters import harvest_all_data

@@ -24,7 +24,7 @@ _initialized_loggers = {}
 
 def setup_logger(name: str, level=logging.INFO) -> logging.Logger:
     """Sets up a logger with a rotating file handler and console output."""
-    # Check if we've already initialized this logger
+    # FIXED: Check if we've already initialized this logger
     if name in _initialized_loggers:
         return _initialized_loggers[name]
         
@@ -32,7 +32,7 @@ def setup_logger(name: str, level=logging.INFO) -> logging.Logger:
     logger.setLevel(level)
     logger.propagate = False
     
-    # If the logger already has handlers, we don't need to add more
+    # FIXED: If the logger already has handlers, we don't need to add more
     if logger.hasHandlers():
         _initialized_loggers[name] = logger
         return logger

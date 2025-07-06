@@ -38,6 +38,7 @@ LOGS_DIR = BASE_DIR / 'logs'
 ASSETS_DIR = BASE_DIR / 'assets'
 PDF_TXT_DIR = OUTPUT_DIR / 'pdf_texts'
 CACHE_DIR = BASE_DIR / 'cache'
+NEED_REVIEW_DIR = OUTPUT_DIR  # ADDED: Missing directory constant
 CONFIG_FILE = BASE_DIR / 'config.json'
 
 # --- GUI and App Color Configuration ---

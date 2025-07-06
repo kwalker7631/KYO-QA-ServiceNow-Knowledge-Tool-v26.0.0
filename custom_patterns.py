@@ -1,7 +1,5 @@
 # custom_patterns.py
-# Version: 25.1.1
-# Last modified: 2025-07-02
-# This file stores user-defined regex patterns for model number and QA number detection.
+# This file stores user-defined regex patterns.
 
 MODEL_PATTERNS = [
     r'\bDP\b',
@@ -12,7 +10,12 @@ MODEL_PATTERNS = [
     r'\bKM-\d+\b',
     r'\bP\d+dn\b',
     r'\bFS\-\d+DN\b',
+    r'\bFS\-C\d+DN\b',
+    r'\bTASKalfa\ \d+ci\b',
 ]
 
 QA_NUMBER_PATTERNS = [
+]
+
+PART_NUMBER_PATTERNS = [
 ]

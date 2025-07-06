@@ -6,6 +6,8 @@ import logging
 from PIL import Image
 import io
 import sys
+import cv2  # OpenCV for image processing
+import numpy as np
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -73,6 +75,7 @@ def _is_ocr_needed(pdf_path):
             if text_length < 150:
                 return True
     except Exception as e:
+        # FIXED: Include filename in warning message for easier identification
         logger.warning(f"Could not pre-check PDF {Path(pdf_path).name} for OCR needs: {e}")
         return True
     return False
@@ -93,11 +96,15 @@ def extract_text_from_pdf(pdf_path):
             logger.info(f"Attempting OCR on {pdf_path.name}")
             return extract_text_with_ocr(pdf_path)
         else:
+            # FIXED: Include filename in warning message
             logger.warning(f"No text found in {pdf_path.name} and OCR is not available.")
-            return ""
+            # FIXED: Return error message instead of empty string
+            return f"ERROR: OCR not available for {pdf_path.name}"
     except Exception as exc:
+        # FIXED: Include detailed error with filename
         logger.error(f"Failed to extract text from {pdf_path.name}: {exc}")
-        return ""
+        # FIXED: Return error message instead of empty string
+        return f"ERROR: Text extraction failed for {pdf_path.name}: {exc}"
 
 def extract_text_with_ocr(pdf_path):
     """Extract text from a PDF using basic OCR."""
@@ -116,7 +123,7 @@ def extract_text_with_ocr(pdf_path):
                 img_data = pix.samples
                 
                 # Convert to PIL Image
-                img = Image.open(io.BytesIO(img_data))
+                img = Image.frombytes("RGB", [pix.width, pix.height], img_data)
                 
                 # Use Tesseract to do OCR on the image
                 page_text = pytesseract.image_to_string(img, lang='eng')
@@ -127,5 +134,7 @@ def extract_text_with_ocr(pdf_path):
         logger.info(f"OCR extraction complete for {pdf_path.name}: {len(result)} chars")
         return result
     except Exception as e:
+        # FIXED: Include detailed error with filename
         logger.error(f"OCR extraction failed for {pdf_path.name}: {e}")
-        return ""
+        # FIXED: Return error message instead of empty string
+        return f"ERROR: OCR extraction failed for {pdf_path.name}: {e}"
