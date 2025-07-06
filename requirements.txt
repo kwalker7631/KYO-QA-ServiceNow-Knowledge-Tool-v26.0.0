@@ -9,3 +9,6 @@ pypdf
 pdf2image
 anthropic
 PyMuPDF
+opencv-python
+colorama
+python-dateutil

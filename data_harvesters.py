@@ -1,87 +1,137 @@
 # data_harvesters.py
-import os
 import re
-import pandas as pd
+import importlib
 import logging
+from pathlib import Path
 
-# Local module imports
-from config import (
-    MODEL_PATTERNS,
-    PART_NUMBER_PATTERNS,
-    SERIAL_NUMBER_PATTERNS,
-    QA_NUMBER_PATTERNS,
-    DOCUMENT_TYPE_PATTERNS,
-    DOCUMENT_TITLE_PATTERNS,
-    REVISION_PATTERNS,
-    LANGUAGE_PATTERNS,
-    EXCLUSION_PATTERNS,
-    UNWANTED_AUTHORS,
-    STANDARDIZATION_RULES
-)
-import logging_utils
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("harvesters")
 
-# --- FIX: Use the correct function name `setup_logger` ---
-# This was the cause of the AttributeError.
-logger = logging_utils.setup_logger("harvesters")
+# Import from config with fallback values
+try:
+    from config import (
+        MODEL_PATTERNS as DEFAULT_MODEL_PATTERNS,
+        QA_NUMBER_PATTERNS as DEFAULT_QA_PATTERNS,
+        EXCLUSION_PATTERNS,
+        UNWANTED_AUTHORS,
+        STANDARDIZATION_RULES,
+    )
+except ImportError:
+    # Fallback values if config import fails
+    DEFAULT_MODEL_PATTERNS = [
+        r'\bTASKalfa\s*[\w-]+\b',
+        r'\bECOSYS\s*[\w-]+\b',
+        r'\b(PF|DF|MK|AK|DP|BF|JS)-\d+[\w-]*\b',
+    ]
+    DEFAULT_QA_PATTERNS = [r'\bQA[-_]?[\w-]+', r'\bSB[-_]?[\w-]+']
+    EXCLUSION_PATTERNS = ["CVE-", "CWE-", "TK-"]
+    UNWANTED_AUTHORS = ["Knowledge Import"]
+    STANDARDIZATION_RULES = {"TASKalfa-": "TASKalfa ", "ECOSYS-": "ECOSYS "}
 
-def harvest_all_data(text, qa_number):
-    """
-    Harvests all specified data points from the given text.
-    """
-    data = {
-        'qa_number': qa_number,
-        'models': harvest_data(text, MODEL_PATTERNS),
-        'part_numbers': harvest_data(text, PART_NUMBER_PATTERNS),
-        'serial_numbers': harvest_data(text, SERIAL_NUMBER_PATTERNS),
-        'document_type': harvest_data(text, DOCUMENT_TYPE_PATTERNS, max_capture=1),
-        'document_title': harvest_data(text, DOCUMENT_TITLE_PATTERNS, max_capture=1),
-        'revision': harvest_data(text, REVISION_PATTERNS, max_capture=1),
-        'language': harvest_data(text, LANGUAGE_PATTERNS, max_capture=1)
-    }
-    return data
-
-def harvest_data(text, patterns, max_capture=None):
-    """
-    Generic function to find data in text based on a list of regex patterns.
-    """
-    results = []
-    for pattern in patterns:
-        try:
-            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
-            for match in matches:
-                # If the pattern uses capturing groups, the result might be a tuple
-                if isinstance(match, tuple):
-                    # Find the first non-empty group
-                    actual_match = next((item for item in match if item), None)
-                else:
-                    actual_match = match
-
-                if actual_match and actual_match.strip():
-                    results.append(standardize_data(actual_match.strip()))
-        except re.error as e:
-            logger.error(f"Regex error with pattern '{pattern}': {e}")
+def get_combined_patterns(pattern_name: str, default_patterns: list) -> list:
+    """Safely loads and combines default and custom patterns."""
+    custom_patterns = []
+    try:
+        # First check if custom_patterns.py exists
+        if not Path("custom_patterns.py").exists():
+            logger.warning("custom_patterns.py not found. Using default patterns only.")
+            return default_patterns
             
-    # Remove duplicates and items in the exclusion list
-    unique_results = sorted(list(set(results)))
-    filtered_results = [res for res in unique_results if not any(re.search(ex, res, re.IGNORECASE) for ex in EXCLUSION_PATTERNS)]
+        # Try to import custom patterns
+        custom_mod = importlib.import_module("custom_patterns")
+        importlib.reload(custom_mod)
+        custom_patterns = getattr(custom_mod, pattern_name, [])
+        logger.info(f"Loaded {len(custom_patterns)} custom patterns for {pattern_name}")
+    except (ImportError, SyntaxError) as e:
+        logger.warning(f"Error loading custom patterns: {e}. Using default patterns only.")
+        return default_patterns
+    
+    # Combine custom and default patterns, removing duplicates
+    combined = custom_patterns + [p for p in default_patterns if p not in custom_patterns]
+    logger.info(f"Using {len(combined)} total patterns for {pattern_name}")
+    return combined
 
-    if max_capture:
-        return filtered_results[0] if filtered_results else None
-        
-    return filtered_results
+def is_excluded(text: str) -> bool:
+    """Checks if a string contains any of the unwanted exclusion patterns."""
+    if not text:
+        return True
+    for pattern in EXCLUSION_PATTERNS:
+        if pattern.lower() in text.lower():
+            return True
+    return False
 
-def standardize_data(value):
-    """
-    Applies standardization rules to the captured data.
-    """
+def clean_model_string(model_str: str) -> str:
+    """Applies standardization rules to a found model string."""
+    if not model_str:
+        return ""
+    cleaned = model_str
     for rule, replacement in STANDARDIZATION_RULES.items():
-        value = re.sub(rule, replacement, value, flags=re.IGNORECASE)
-    return value
+        cleaned = cleaned.replace(rule, replacement)
+    return cleaned.strip()
 
-def harvest_author(text):
-    """
-    Specifically harvests the author from the text, excluding unwanted names.
-    """
-    # This is a placeholder for a more sophisticated author harvesting logic
-    # For now, it might just return a default or be left empty.
-    return "Unknown"
+def harvest_models(text: str, filename: str) -> list:
+    """Finds all unique models from text and filename, respecting exclusions."""
+    if not text and not filename:
+        logger.warning("No text or filename provided for model harvesting")
+        return []
+        
+    models = set()
+    patterns = get_combined_patterns("MODEL_PATTERNS", DEFAULT_MODEL_PATTERNS)
+    
+    for content in [text, filename.replace("_", " ")]:
+        if not content:
+            continue
+            
+        for pattern in patterns:
+            try:
+                for match in re.findall(pattern, content, re.IGNORECASE):
+                    if not is_excluded(match):
+                        models.add(clean_model_string(match))
+            except re.error as e:
+                logger.error(f"Invalid regex pattern: {pattern}, Error: {e}")
+            except Exception as e:
+                logger.error(f"Error processing pattern {pattern}: {e}")
+                
+    return sorted(list(models))
+
+def harvest_author(text: str) -> str:
+    """Finds the author and returns an empty string if it's an unwanted name."""
+    if not text:
+        return ""
+        
+    # Common author patterns
+    author_patterns = [
+        r"Author:\s*(.*?)(?:\n|$)",
+        r"Created by:\s*(.*?)(?:\n|$)",
+        r"Written by:\s*(.*?)(?:\n|$)"
+    ]
+    
+    for pattern in author_patterns:
+        try:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                author = match.group(1).strip()
+                # Ensure the found author is not in the unwanted list
+                if author and author not in UNWANTED_AUTHORS:
+                    return author
+        except Exception as e:
+            logger.error(f"Error extracting author with pattern {pattern}: {e}")
+            
+    return ""
+
+def harvest_all_data(text: str, filename: str) -> dict:
+    """The main harvester function that aggregates all data."""
+    if not text and not filename:
+        logger.warning("No text or filename provided for data harvesting")
+        return {"models": "Not Found", "author": ""}
+    
+    try:
+        models = harvest_models(text, filename)
+        models_str = ", ".join(models) if models else "Not Found"
+        author_str = harvest_author(text)
+        
+        return {"models": models_str, "author": author_str}
+    except Exception as e:
+        logger.error(f"Error in harvest_all_data: {e}")
+        return {"models": "Not Found", "author": ""}

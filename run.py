@@ -1,6 +1,6 @@
 # run.py
 # Version: 26.0.0
-# Last modified: 2025-07-03
+# Last modified: 2025-07-06
 # Application launcher with dependency setup and error handling
 
 import sys
@@ -52,7 +52,8 @@ REQUIRED_PACKAGES = [
     "colorama", 
     "python-dateutil", 
     "Pillow", 
-    "opencv-python"
+    "opencv-python",
+    "numpy"
 ]
 
 def print_header():
@@ -149,13 +150,25 @@ def setup_environment():
             print("[INFO] Installing dependencies (this may take a few minutes)...")
             if not run_command_with_spinner([str(venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)], "Installing packages"):
                 print(f"{Colors.YELLOW}Bulk installation failed. Trying individual packages...{Colors.ENDC}")
+                
+                # First install numpy as it's needed by opencv-python
+                run_command_with_spinner([str(venv_python), "-m", "pip", "install", "numpy"], "Installing numpy")
+                
                 for package in REQUIRED_PACKAGES:
                     if not run_command_with_spinner([str(venv_python), "-m", "pip", "install", package], f"Installing {package}"):
-                        print(f"{Colors.RED}Failed to install {package}. This may affect functionality.{Colors.ENDC}")
+                        print(f"{Colors.YELLOW}Failed to install {package}. This may affect functionality.{Colors.ENDC}")
+                
+                # Try to install remaining packages from requirements
+                run_command_with_spinner([str(venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)], 
+                                         "Installing remaining packages")
         else:
             print(f"{Colors.GREEN}✓ Virtual environment already exists.{Colors.ENDC}")
             if not run_command_with_spinner([str(venv_python), "-m", "pip", "install", "--quiet", "-r", str(REQUIREMENTS_FILE)], "Verifying dependencies"):
                 print(f"{Colors.YELLOW}Warning: Some dependencies may not be properly installed.{Colors.ENDC}")
+                # Try installing core packages individually
+                for package in REQUIRED_PACKAGES:
+                    run_command_with_spinner([str(venv_python), "-m", "pip", "install", "--quiet", package], 
+                                            f"Ensuring {package} is installed")
 
         print(f"{Colors.GREEN}✓ Environment is ready.{Colors.ENDC}")
         return True
@@ -182,7 +195,56 @@ def launch_application():
         print("[INFO] A console window will remain open for stability. You can minimize it.")
 
         venv_python = get_venv_python_path()
-        subprocess.run([str(venv_python), str(MAIN_APP_SCRIPT)], check=True)
+        
+        # Create a wrapped script to handle ImportError more gracefully
+        wrapper_script = """
+import sys
+import importlib
+
+try:
+    import kyo_qa_tool_app
+    kyo_qa_tool_app.main()
+except ImportError as e:
+    module_name = str(e).split("'")[-2] if "'" in str(e) else str(e).split()[-1]
+    if module_name:
+        print(f"\\nMissing dependency: {module_name}")
+        print(f"Attempting to install {module_name}...")
+        import subprocess
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", module_name])
+            print(f"Successfully installed {module_name}, restarting application...")
+            # Try to reimport
+            if module_name in sys.modules:
+                del sys.modules[module_name]
+            importlib.import_module(module_name)
+            # Now try to run the application again
+            import kyo_qa_tool_app
+            kyo_qa_tool_app.main()
+        except Exception as install_error:
+            print(f"Failed to install {module_name}: {install_error}")
+            print("\\nPlease run the following command manually:")
+            print(f"  {sys.executable} -m pip install {module_name}")
+            input("\\nPress Enter to exit...")
+    else:
+        print(f"\\nImport error: {e}")
+        input("\\nPress Enter to exit...")
+except Exception as e:
+    print(f"\\nApplication error: {e}")
+    input("\\nPress Enter to exit...")
+"""
+        
+        # Write the wrapper script to a temporary file
+        wrapper_path = Path(__file__).parent / "run_wrapper.py"
+        with open(wrapper_path, 'w') as f:
+            f.write(wrapper_script)
+            
+        # Run the application with the wrapper
+        subprocess.run([str(venv_python), str(wrapper_path)], check=True)
+        
+        # Clean up
+        if wrapper_path.exists():
+            wrapper_path.unlink()
+            
         print(f"\n{Colors.GREEN}--- Application Closed ---{Colors.ENDC}")
     except subprocess.CalledProcessError as exc:
         print(f"\n{Colors.RED}--- APPLICATION CRASHED ---{Colors.ENDC}")
@@ -219,9 +281,31 @@ def launch_application():
         
         raise
 
+def add_main_function_to_app():
+    """Add a main() function to kyo_qa_tool_app.py if it doesn't exist."""
+    try:
+        app_path = Path(MAIN_APP_SCRIPT)
+        content = app_path.read_text(encoding='utf-8')
+        
+        # Check if main() function already exists
+        if "def main():" not in content:
+            # Add main function before the if __name__ == "__main__" block
+            if "if __name__ == \"__main__\":" in content:
+                new_content = content.replace(
+                    "if __name__ == \"__main__\":",
+                    "def main():\n    app = KyoQAToolApp()\n    app.mainloop()\n\nif __name__ == \"__main__\":"
+                )
+                app_path.write_text(new_content, encoding='utf-8')
+                print(f"{Colors.GREEN}✓ Added main() function to {app_path.name}{Colors.ENDC}")
+    except Exception as e:
+        print(f"{Colors.YELLOW}Note: Could not update {app_path.name}: {e}{Colors.ENDC}")
+
 if __name__ == "__main__":
     try:
         if setup_environment():
+            # Add main() function to app file if needed
+            add_main_function_to_app()
+            
             # Only try to initialize error tracker after dependencies are installed
             try:
                 import error_tracker
@@ -245,7 +329,8 @@ if __name__ == "__main__":
         if report_error_to_ai:
             report_error_to_ai(exc, context)
         
-        raise
-
-    print("\nPress Enter to exit the launcher.")
-    input()
+        print("\nThe application could not be started. Please check the log files for details.")
+        input("\nPress Enter to exit...")
+    else:
+        print("\nPress Enter to exit the launcher.")
+        input()

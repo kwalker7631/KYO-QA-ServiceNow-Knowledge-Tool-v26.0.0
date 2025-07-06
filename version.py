@@ -1,9 +1,13 @@
-# This file defines the application's version number.
+# version.py
+# Version: 26.0.0
+# Last modified: 2025-07-06
 
-# The name `__version__` is a standard Python convention and is expected
-# by some of the modules we have been fixing.
-__version__ = "26.1.0"
+# The version number used throughout the application
+__version__ = "26.0.0"
 
-# The name `VERSION` is used by your main application file. We define it
-# here as well to ensure compatibility across the entire project.
+# Alias for backward compatibility
 VERSION = __version__
+
+def get_version():
+    """Return the current application version."""
+    return __version__

@@ -1,76 +1,131 @@
 # ocr_utils.py
-import logging
-from pathlib import Path
 import fitz  # PyMuPDF
+import os
+from pathlib import Path
+import logging
 from PIL import Image
-import pytesseract
 import io
+import sys
 
-from custom_exceptions import PDFExtractionError
-from file_utils import find_tesseract_executable
+# Set up basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("ocr_utils")
 
-# Configure logging
-logger = logging.getLogger("app.ocr")
+# Global flag for Tesseract availability
+TESSERACT_AVAILABLE = False
 
-# Find Tesseract at startup
-try:
-    TESSERACT_PATH = find_tesseract_executable()
-    pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
-    TESSERACT_AVAILABLE = True
-    logger.info(f"Tesseract OCR found at: {TESSERACT_PATH}")
-except FileNotFoundError:
-    TESSERACT_AVAILABLE = False
-    logger.warning("Tesseract OCR executable not found. Text extraction will be limited.")
-
-def _open_pdf(pdf_path: Path):
-    """Safely opens a PDF, handling passwords and corruption."""
+def init_tesseract():
+    """Initialize Tesseract OCR if available."""
+    global TESSERACT_AVAILABLE
     try:
-        pdf_document = fitz.open(pdf_path)
-        if pdf_document.is_encrypted and not pdf_document.authenticate(''):
-            logger.warning(f"'{pdf_path.name}' is password-protected and could not be opened.")
-            raise PDFExtractionError(f"File '{pdf_path.name}' is encrypted.")
-        return pdf_document
-    except fitz.errors.FileDataError as e:
-        logger.error(f"Could not read PDF '{pdf_path.name}'. It may be corrupt. Error: {e}")
-        raise PDFExtractionError(f"File '{pdf_path.name}' is corrupt or unreadable.")
-    except Exception as e:
-        logger.error(f"General error opening '{pdf_path.name}': {e}")
-        raise PDFExtractionError(f"Could not open '{pdf_path.name}'.")
-
-def get_text_from_pdf(pdf_path: Path) -> str:
-    """
-    Extracts text from a PDF. It first tries to get embedded text.
-    If that fails or returns little text, and Tesseract is available,
-    it performs OCR on the document images.
-    """
-    full_text = []
-    pdf_document = _open_pdf(pdf_path)
-
-    # First, try to extract embedded text
-    for page_num in range(len(pdf_document)):
-        page = pdf_document.load_page(page_num)
-        full_text.append(page.get_text())
-
-    embedded_text = "\n".join(full_text).strip()
-
-    # If embedded text is sparse and OCR is available, perform OCR
-    if len(embedded_text) < 100 and TESSERACT_AVAILABLE:
-        logger.info(f"Embedded text for '{pdf_path.name}' is minimal. Attempting OCR.")
-        ocr_text = []
-        for page_num in range(len(pdf_document)):
-            page = pdf_document.load_page(page_num)
-            pix = page.get_pixmap(dpi=300)  # Higher DPI for better OCR
-            img = Image.open(io.BytesIO(pix.tobytes()))
-            try:
-                text = pytesseract.image_to_string(img, lang='eng')
-                ocr_text.append(text)
-            except pytesseract.TesseractError as e:
-                logger.error(f"Tesseract failed on page {page_num+1} of {pdf_path.name}: {e}")
+        import pytesseract
         
-        return "\n".join(ocr_text)
+        # Check for portable Tesseract
+        portable_path = Path(__file__).parent / "tesseract" / "tesseract.exe"
+        if portable_path.exists():
+            pytesseract.pytesseract.tesseract_cmd = str(portable_path)
+            logger.info(f"Portable Tesseract found at: {portable_path}")
+            TESSERACT_AVAILABLE = True
+            return True
+        
+        # Check common installation paths
+        tesseract_paths = [
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        ]
+        for path in tesseract_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                logger.info(f"Tesseract found at: {path}")
+                TESSERACT_AVAILABLE = True
+                return True
+        
+        # Try to find in PATH
+        try:
+            output = os.popen("tesseract --version").read()
+            if "tesseract" in output.lower():
+                logger.info("Tesseract found in system PATH")
+                TESSERACT_AVAILABLE = True
+                return True
+        except Exception:
+            pass
+            
+        logger.warning("Tesseract OCR not found. Image-based OCR will be disabled.")
+        return False
+    except ImportError:
+        logger.warning("pytesseract not installed. Image-based OCR disabled.")
+        return False
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during Tesseract initialization: {e}")
+        return False
 
-    if not embedded_text:
-        logger.warning(f"Failed to extract any text from '{pdf_path.name}'.")
-        raise PDFExtractionError(f"No text could be extracted from '{pdf_path.name}'.")
+# Try to initialize Tesseract
+init_tesseract()
 
-    return embedded_text
+def _is_ocr_needed(pdf_path):
+    """Pre-checks a PDF to see if it's image-based and likely requires OCR."""
+    try:
+        with fitz.open(pdf_path) as doc:
+            if not doc.is_pdf or doc.is_encrypted:
+                return False
+            
+            text_length = sum(len(page.get_text("text")) for page in doc)
+            if text_length < 150:
+                return True
+    except Exception as e:
+        logger.warning(f"Could not pre-check PDF {Path(pdf_path).name} for OCR needs: {e}")
+        return True
+    return False
+
+def extract_text_from_pdf(pdf_path):
+    """Extract text from a PDF file, using OCR if needed."""
+    try:
+        pdf_path = Path(pdf_path)
+        text = ""
+        with fitz.open(pdf_path) as doc:
+            text = "".join(page.get_text() for page in doc)
+            
+        if text and len(text.strip()) > 50:
+            logger.info(f"Extracted text directly from {pdf_path.name}")
+            return text
+            
+        if TESSERACT_AVAILABLE:
+            logger.info(f"Attempting OCR on {pdf_path.name}")
+            return extract_text_with_ocr(pdf_path)
+        else:
+            logger.warning(f"No text found in {pdf_path.name} and OCR is not available.")
+            return ""
+    except Exception as exc:
+        logger.error(f"Failed to extract text from {pdf_path.name}: {exc}")
+        return ""
+
+def extract_text_with_ocr(pdf_path):
+    """Extract text from a PDF using basic OCR."""
+    if not TESSERACT_AVAILABLE:
+        logger.warning("Tesseract OCR not available, cannot perform OCR.")
+        return ""
+        
+    try:
+        import pytesseract
+        all_text = []
+        
+        with fitz.open(pdf_path) as doc:
+            for page_num, page in enumerate(doc):
+                # Render page at a higher DPI for better quality
+                pix = page.get_pixmap(dpi=300)
+                img_data = pix.samples
+                
+                # Convert to PIL Image
+                img = Image.open(io.BytesIO(img_data))
+                
+                # Use Tesseract to do OCR on the image
+                page_text = pytesseract.image_to_string(img, lang='eng')
+                all_text.append(page_text)
+                logger.info(f"OCR processed page {page_num+1} of {pdf_path.name}")
+                
+        result = "\n\n".join(all_text)
+        logger.info(f"OCR extraction complete for {pdf_path.name}: {len(result)} chars")
+        return result
+    except Exception as e:
+        logger.error(f"OCR extraction failed for {pdf_path.name}: {e}")
+        return ""

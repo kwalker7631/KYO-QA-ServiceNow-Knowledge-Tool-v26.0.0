@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
+from config import BRAND_COLORS
 
 class ToolTip:
     """Create a tooltip for a given widget."""
@@ -32,6 +33,7 @@ def create_main_header(parent, version, colors):
     header_frame.columnconfigure(0, weight=1)
     title_label = ttk.Label(header_frame, text=f"KYOCERA QA Knowledge Tool v{version}", style="Header.TLabel")
     title_label.grid(row=0, column=0, sticky="w")
+    return header_frame
 
 def create_io_section(parent, app):
     """Creates the 'Select Inputs' frame."""
@@ -57,6 +59,8 @@ def create_io_section(parent, app):
     files_btn = ttk.Button(io_frame, text="Browse Files...", command=app.browse_files)
     files_btn.grid(row=1, column=4, padx=5)
     ToolTip(files_btn, "Select one or more individual PDF files.")
+    
+    return io_frame
 
 def create_process_controls(parent, app):
     """Creates the 'Process & Manage' frame with all control buttons."""
@@ -90,6 +94,8 @@ def create_process_controls(parent, app):
 
     app.exit_btn = ttk.Button(controls_frame, text="Exit", command=app.on_closing)
     app.exit_btn.grid(row=2, column=3, sticky="ew", padx=5, pady=5)
+    
+    return controls_frame
 
 def create_status_and_log_section(parent, app):
     """Creates the 'Status & Logs' frame."""
@@ -97,14 +103,36 @@ def create_status_and_log_section(parent, app):
     status_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=5)
     status_frame.columnconfigure(0, weight=1)
     
-    # Progress Bar
-    app.progress_bar = ttk.Progressbar(status_frame, variable=app.progress_value, mode='determinate')
-    app.progress_bar.grid(row=0, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+    # Progress Bar and Status
+    prog_frame = ttk.Frame(status_frame)
+    prog_frame.grid(row=0, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+    prog_frame.columnconfigure(0, weight=1)
     
-    # Status Label
-    ttk.Label(status_frame, text="●", foreground="green", font=("Segoe UI", 12)).grid(row=1, column=0, sticky="w", padx=(5,0))
-    app.status_label = ttk.Label(status_frame, textvariable=app.status_current_file)
-    app.status_label.grid(row=1, column=1, sticky="w")
+    app.progress_bar = ttk.Progressbar(prog_frame, variable=app.progress_value, mode='determinate')
+    app.progress_bar.grid(row=0, column=0, sticky="ew")
+    
+    # Adding percentage label and cancel button
+    app.progress_percent_var = tk.StringVar(value="0%")
+    ttk.Label(prog_frame, textvariable=app.progress_percent_var).grid(row=0, column=1, padx=(5, 10))
+    app.cancel_progress_btn = ttk.Button(prog_frame, text="Cancel", command=app.stop_processing, width=8, state=tk.DISABLED)
+    app.cancel_progress_btn.grid(row=0, column=2)
+    
+    # Status indicator with current file
+    status_indicator = ttk.Frame(status_frame)
+    status_indicator.grid(row=1, column=0, sticky="ew", padx=5, pady=(0, 5))
+    status_indicator.columnconfigure(1, weight=1)
+    
+    # Status dot and label
+    app.status_dot_color = tk.StringVar(value="green")
+    status_dot = tk.Label(status_indicator, text="●", foreground="green", font=("Segoe UI", 12))
+    status_dot.grid(row=0, column=0, sticky="w", padx=(5, 0))
+    app.status_label = ttk.Label(status_indicator, textvariable=app.status_current_file)
+    app.status_label.grid(row=0, column=1, sticky="w", padx=(5, 0))
+    
+    # Add processing stage indicator
+    app.stage_var = tk.StringVar(value="Ready")
+    ttk.Label(status_indicator, text="Stage:").grid(row=0, column=2, padx=(20, 5))
+    ttk.Label(status_indicator, textvariable=app.stage_var).grid(row=0, column=3, padx=(0, 20))
     
     # Counters
     counter_frame = ttk.Frame(status_frame)
@@ -117,6 +145,25 @@ def create_status_and_log_section(parent, app):
     ttk.Label(counter_frame, textvariable=app.review_count).pack(side="left")
     ttk.Label(counter_frame, text="OCR:").pack(side="left", padx=(10, 2))
     ttk.Label(counter_frame, textvariable=app.ocr_count).pack(side="left")
+    
+    # Log display
+    log_frame = ttk.Frame(status_frame)
+    log_frame.grid(row=2, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+    log_frame.columnconfigure(0, weight=1)
+    log_frame.rowconfigure(0, weight=1)
+    
+    app.log_text = tk.Text(log_frame, height=8, wrap="word", font=("Consolas", 9))
+    app.log_text.grid(row=0, column=0, sticky="nsew")
+    app.log_text.tag_configure("error", foreground="red")
+    app.log_text.tag_configure("warning", foreground="orange")
+    app.log_text.tag_configure("info", foreground="black")
+    app.log_text.tag_configure("success", foreground="green")
+    
+    log_scrollbar = ttk.Scrollbar(log_frame, orient="vertical", command=app.log_text.yview)
+    log_scrollbar.grid(row=0, column=1, sticky="ns")
+    app.log_text.config(yscrollcommand=log_scrollbar.set)
+    
+    return status_frame
 
 def create_review_section(parent, app):
     """Creates the 'Files to Review' listbox."""
@@ -135,3 +182,17 @@ def create_review_section(parent, app):
     review_btn = ttk.Button(review_frame, text="Review Selected", command=app.review_selected_file)
     review_btn.grid(row=1, column=0, columnspan=2, sticky="e", pady=5)
     ToolTip(review_btn, "Open the selected file in the pattern editor.")
+    
+    return review_frame
+
+def log_message(app, message, level="info"):
+    """Helper function to log messages to the application's log text widget."""
+    app.log_text.config(state="normal")
+    app.log_text.insert("end", f"{message}\n", level)
+    app.log_text.see("end")
+    app.log_text.config(state="disabled")
+
+def update_progress(app, value):
+    """Update progress bar and percentage display."""
+    app.progress_value.set(value)
+    app.progress_percent_var.set(f"{int(value)}%")

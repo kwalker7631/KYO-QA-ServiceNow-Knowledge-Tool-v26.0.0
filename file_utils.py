@@ -3,12 +3,14 @@ import sys
 import shutil
 import tempfile
 import logging
+import platform
 from tkinter import messagebox
 from pathlib import Path
-import stat # <-- Required for changing file attributes
+import stat # Required for changing file attributes
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def try_unlock_file(filepath: Path) -> bool:
     """
@@ -45,12 +47,22 @@ def find_tesseract_executable():
     if getattr(sys, 'frozen', False):
         search_paths.append(Path(sys._MEIPASS) / 'Tesseract-OCR' / 'tesseract.exe')
     
-    search_paths.extend([
-        Path.cwd() / 'Tesseract-OCR' / 'tesseract.exe',
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Tesseract-OCR" / "tesseract.exe",
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Tesseract-OCR" / "tesseract.exe"
-    ])
-
+    # Add portable location
+    search_paths.append(Path.cwd() / 'tesseract' / 'tesseract.exe')
+    
+    # Add typical installation locations
+    if platform.system() == "Windows":
+        search_paths.extend([
+            Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Tesseract-OCR" / "tesseract.exe",
+            Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Tesseract-OCR" / "tesseract.exe",
+            Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Tesseract-OCR" / "tesseract.exe"
+        ])
+    else:
+        # Unix-like systems typically have tesseract in PATH
+        tesseract_paths = shutil.which("tesseract")
+        if tesseract_paths:
+            search_paths.append(Path(tesseract_paths))
+    
     for path in search_paths:
         if path.exists():
             logging.info(f"Found Tesseract at: {path}")
@@ -63,15 +75,46 @@ def find_tesseract_executable():
 
 def is_file_locked(filepath):
     """
-    Checks if a file is locked by attempting to open it in append mode.
+    Checks if a file is locked by attempting to open it in exclusive mode.
+    Works on both Windows and Unix-like systems.
     """
-    try:
-        with open(filepath, 'a+b'):
-            pass
+    if not Path(filepath).exists():
+        logging.warning(f"File does not exist: {filepath}")
         return False
-    except (IOError, PermissionError) as e:
-        logging.warning(f"File is locked: {filepath}. Reason: {e}")
-        return True
+        
+    try:
+        if platform.system() == "Windows":
+            # On Windows, use msvcrt for file locking check
+            try:
+                import msvcrt
+                with open(filepath, 'rb') as f:
+                    # Try to get an exclusive lock
+                    msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                    # If we get here, the file isn't locked
+                    msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+            except (IOError, PermissionError):
+                return True
+        else:
+            # On Unix-like systems, use fcntl
+            try:
+                import fcntl
+                with open(filepath, 'a+b') as f:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                return False
+            except (IOError, PermissionError):
+                return True
+    except (ImportError, Exception) as e:
+        # Fallback method if platform-specific modules are unavailable
+        logging.warning(f"Using fallback lock detection for {filepath}: {e}")
+        try:
+            with open(filepath, 'a+b'):
+                pass
+            return False
+        except (IOError, PermissionError) as e:
+            logging.warning(f"File is locked: {filepath}. Reason: {e}")
+            return True
 
 def create_temp_working_dir():
     """
@@ -124,16 +167,36 @@ def setup_output_folders(base_dir):
 # --- Compatibility Functions ---
 def open_file(filepath):
     """Opens a file with the default application."""
+    filepath = Path(filepath)
+    if not filepath.exists():
+        logging.error(f"Failed to open file - not found: {filepath}")
+        messagebox.showerror("Error", f"Could not open the file because it doesn't exist:\n{filepath}")
+        return
+        
     try:
-        os.startfile(filepath)
+        if platform.system() == "Windows":
+            os.startfile(filepath)
+        elif platform.system() == "Darwin":  # macOS
+            os.system(f"open '{filepath}'")
+        else:  # Linux and other Unix
+            os.system(f"xdg-open '{filepath}'")
     except Exception as e:
         logging.error(f"Failed to open file {filepath}: {e}")
-        messagebox.showerror("Error", f"Could not open the file:\n{filepath}")
+        messagebox.showerror("Error", f"Could not open the file:\n{filepath}\n\nError: {e}")
 
-def ensure_folders(base_dir):
+def ensure_folders(base_dir=None):
     """Alias for setup_output_folders for backward compatibility."""
-    logging.warning("Using deprecated function 'ensure_folders'. Please switch to 'setup_output_folders'.")
-    return setup_output_folders(base_dir)
+    from config import OUTPUT_DIR, LOGS_DIR, PDF_TXT_DIR, CACHE_DIR, NEED_REVIEW_DIR
+    
+    # Create the base directories
+    for directory in [OUTPUT_DIR, LOGS_DIR, PDF_TXT_DIR, CACHE_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)
+    
+    # Create needs_review subdirectory
+    review_dir = NEED_REVIEW_DIR / "needs_review"
+    review_dir.mkdir(parents=True, exist_ok=True)
+    
+    return setup_output_folders(base_dir or OUTPUT_DIR)
 
 def cleanup_temp_files(directory_path):
     """Alias for cleanup_directory for backward compatibility."""
