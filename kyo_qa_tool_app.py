@@ -3,17 +3,15 @@
 # Last modified: 2025-07-06
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 from pathlib import Path
 import threading
 import queue
 import time
 import sys
-import webbrowser
 
-from config import ASSETS_DIR
 from processing_engine import run_processing_job
-from file_utils import open_file, ensure_folders, cleanup_directory, extract_zip_to_temp
+from file_utils import ensure_folders, cleanup_directory, extract_zip_to_temp
 from kyo_review_tool import ReviewWindow
 from version import VERSION
 import logging_utils
@@ -42,6 +40,8 @@ class KyoQAToolApp(tk.Tk):
         self.reviewable_files = []
         self.response_queue = queue.Queue()
         self.cancel_event = threading.Event()
+        self.pause_event = threading.Event()
+        self.spinner_running = False
         
         self.selected_folder = tk.StringVar()
         self.selected_excel = tk.StringVar()
@@ -88,15 +88,22 @@ class KyoQAToolApp(tk.Tk):
 
     def start_processing(self):
         """Validates inputs and starts the processing job in a thread."""
-        if self.is_processing: return
+        if self.is_processing:
+            return
         
         input_path = self.selected_folder.get() or self.selected_files_list
         if not input_path:
-            messagebox.showwarning("Input Missing", "Please select a PDF source (folder, files, or ZIP).")
+            messagebox.showwarning(
+                "Input Missing",
+                "Please select a PDF source (folder, files, or ZIP).",
+            )
             return
         excel_path = self.selected_excel.get()
         if not excel_path:
-            messagebox.showwarning("Input Missing", "Please select an Excel template file.")
+            messagebox.showwarning(
+                "Input Missing",
+                "Please select an Excel template file.",
+            )
             return
             
         job = {"excel_path": excel_path, "input_path": input_path}
@@ -104,19 +111,23 @@ class KyoQAToolApp(tk.Tk):
         self.update_ui_for_start()
         self.log_message("Starting processing job...", "info")
         
-        threading.Thread(target=run_processing_job, 
-                         args=(job, self.response_queue, self.cancel_event), 
-                         daemon=True).start()
+        threading.Thread(
+            target=run_processing_job,
+            args=(job, self.response_queue, self.cancel_event, self.pause_event),
+            daemon=True,
+        ).start()
 
     def browse_zip(self):
         """Handles browsing for and extracting a ZIP archive."""
         path = filedialog.askopenfilename(title="Select ZIP Archive", filetypes=[("ZIP Archives", "*.zip")])
-        if not path: return
+        if not path:
+            return
 
         zip_path = Path(path)
         self.log_message(f"Extracting PDFs from: {zip_path.name}", "info")
         
-        if self.temp_dir_to_clean: cleanup_directory(self.temp_dir_to_clean)
+        if self.temp_dir_to_clean:
+            cleanup_directory(self.temp_dir_to_clean)
         
         temp_dir = extract_zip_to_temp(zip_path)
         if not temp_dir:
@@ -137,8 +148,11 @@ class KyoQAToolApp(tk.Tk):
         self.log_message(f"Ready to process {len(pdf_files)} files from {zip_path.name}.", "success")
 
     def browse_excel(self):
-        path = filedialog.askopenfilename(title="Select Excel Template", filetypes=[("Excel Files", "*.xlsx *.xlsm")])
-        if path: self.selected_excel.set(path)
+        path = filedialog.askopenfilename(
+            title="Select Excel Template", filetypes=[("Excel Files", "*.xlsx *.xlsm")]
+        )
+        if path:
+            self.selected_excel.set(path)
 
     def browse_folder(self):
         path = filedialog.askdirectory(title="Select Folder with PDFs")
@@ -158,7 +172,8 @@ class KyoQAToolApp(tk.Tk):
             return
         
         self.cancel_event.set()
-        if self.temp_dir_to_clean: cleanup_directory(self.temp_dir_to_clean)
+        if self.temp_dir_to_clean:
+            cleanup_directory(self.temp_dir_to_clean)
         
         self.destroy()
 
@@ -173,6 +188,9 @@ class KyoQAToolApp(tk.Tk):
         self.reviewable_files.clear()
         self.review_tree.delete(*self.review_tree.get_children())
         self.process_btn.config(state=tk.DISABLED)
+
+        self.spinner_running = True
+        threading.Thread(target=self._spinner_worker, daemon=True).start()
         
         # Reset counters
         for var in [self.count_processed, self.count_pass, self.count_fail, self.count_review]:
@@ -185,10 +203,25 @@ class KyoQAToolApp(tk.Tk):
         self.is_processing = False
         self.process_btn.config(state=tk.NORMAL)
         self.status_current_file.set(f"Job {status}.")
+        self.spinner_running = False
+        if hasattr(self, "spinner_label"):
+            self.spinner_label.config(text="")
         
         if self.temp_dir_to_clean:
             cleanup_directory(self.temp_dir_to_clean)
             self.temp_dir_to_clean = None
+
+    def _spinner_worker(self):
+        frames = "|/-\\"
+        idx = 0
+        while self.spinner_running and not self.cancel_event.is_set():
+            if self.pause_event.is_set():
+                time.sleep(0.2)
+                continue
+            if hasattr(self, "spinner_label"):
+                self.spinner_label.config(text=frames[idx % len(frames)])
+            idx += 1
+            time.sleep(0.1)
 
     def open_review_for_selected_file(self):
         """Opens the pattern review tool for the selected file."""
@@ -246,6 +279,16 @@ class KyoQAToolApp(tk.Tk):
         if messagebox.askyesno("Confirm Stop", "Are you sure you want to stop the current job?"):
             self.cancel_event.set()
             self.log_message("Stop request sent to processing thread.", "warning")
+
+    def pause_processing(self):
+        self.pause_event.set()
+        self.status_current_file.set("Processing paused")
+        self.log_message("Processing paused", "info")
+
+    def resume_processing(self):
+        self.pause_event.clear()
+        self.status_current_file.set("Resuming...")
+        self.log_message("Processing resumed", "info")
 
 def main():
     try:

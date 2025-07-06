@@ -2,12 +2,10 @@
 import shutil
 import time
 import json
-import os
 import logging
 from pathlib import Path
 from datetime import datetime
 import traceback
-import sys
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -16,7 +14,7 @@ logger = logging.getLogger("processing_engine")
 # Try to import required modules, with fallbacks where possible
 try:
     import openpyxl
-    from openpyxl.styles import PatternFill, Alignment
+    from openpyxl.styles import PatternFill
     from openpyxl.utils import get_column_letter
     OPENPYXL_AVAILABLE = True
 except ImportError:
@@ -234,7 +232,7 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
         try:
             with open(cache_path, 'w', encoding='utf-8') as f:
                 json.dump(result, f)
-        except:
+        except Exception:
             pass
             
         return result
@@ -326,8 +324,6 @@ def run_processing_job(job_info, progress_queue, cancel_event, pause_event):
                 progress_queue.put({"type": "status", "msg": "Paused", "led": "Paused"})
                 while pause_event.is_set() and not cancel_event.is_set():
                     time.sleep(0.5)
-                    
-                # Check for cancellation again after pause
                 if cancel_event.is_set():
                     progress_queue.put({"type": "log", "tag": "warning", "msg": "Processing cancelled"})
                     progress_queue.put({"type": "finish", "status": "Cancelled"})
@@ -468,7 +464,7 @@ def run_processing_job(job_info, progress_queue, cancel_event, pause_event):
                             cell_len = len(str(cell.value))
                             if cell_len > max_len:
                                 max_len = cell_len
-                        except:
+                        except Exception:
                             pass
                 
                 adjusted_width = min(max_len + 2, 60)  # Cap width at 60 characters
