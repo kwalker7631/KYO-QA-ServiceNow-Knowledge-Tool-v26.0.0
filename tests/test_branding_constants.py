@@ -25,4 +25,3 @@ EXPECTED_COLORS = {
 def test_branding_constants():
     for attr, expected in EXPECTED_COLORS.items():
         assert getattr(KyoceraColors, attr) == expected
-
