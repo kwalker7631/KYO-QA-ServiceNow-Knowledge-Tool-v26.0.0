@@ -26,3 +26,22 @@ class KyoceraColors:
     STATUS_WARNING = "#ffc107"        # Yellow for warnings
     STATUS_ERROR = "#dc3545"          # Red for errors
     STATUS_INFO_TEXT = "#0dcaf0"      # Cyan for informational link buttons
+
+    # Aliases and Additional Colors
+    BACKGROUND_WIDGET = WIDGET_BG
+    KYOCERA_BLACK = "#000000"
+    TEXT_PRIMARY = TEXT_DARK
+    TEXT_SECONDARY = TEXT_MUTED
+    PRIMARY_BLUE = PRIMARY_ACTION
+    STATUS_INFO = STATUS_INFO_TEXT
+    DARK_GREY = "#282828"
+    LIGHT_GREY = "#F2F2F2"
+    PURPLE = "#6D2C91"
+    STATUS_ORANGE_LIGHT = "#FAD9C6"
+    STATUS_BLUE_LIGHT = "#CCE5F3"
+    STATUS_GREEN_LIGHT = "#CCEFDA"
+    STATUS_RED_LIGHT = "#F5B7B1"
+
+    # WCAG-compliant high-contrast colors
+    HIGH_CONTRAST_BG = "#000000"
+    HIGH_CONTRAST_TEXT = "#FFFFFF"
