@@ -10,7 +10,7 @@ import queue
 import time
 import sys
 
-from processing_engine import run_processing_job
+from processing_engine import process_job
 from file_utils import ensure_folders, cleanup_directory, extract_zip_to_temp
 from kyo_review_tool import ReviewWindow
 from version import VERSION
@@ -112,8 +112,8 @@ class KyoQAToolApp(tk.Tk):
         self.log_message("Starting processing job...", "info")
         
         threading.Thread(
-            target=run_processing_job,
-            args=(job, self.response_queue, self.cancel_event, self.pause_event),
+            target=process_job,
+            args=(job, {"progress_queue": self.response_queue, "cancel_event": self.cancel_event, "pause_event": self.pause_event}),
             daemon=True,
         ).start()
 
