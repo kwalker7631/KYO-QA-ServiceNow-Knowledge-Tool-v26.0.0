@@ -18,6 +18,7 @@ if 'PIL.Image' not in sys.modules:
 processing_stub = types.ModuleType("processing_engine")
 processing_stub.process_folder = lambda *a, **k: None
 processing_stub.process_zip_archive = lambda *a, **k: None
+processing_stub.run_processing_job = lambda *a, **k: None
 sys.modules.setdefault("processing_engine", processing_stub)
 
 # Stub Pillow's Image module

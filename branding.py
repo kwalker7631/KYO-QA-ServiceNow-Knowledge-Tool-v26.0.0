@@ -27,7 +27,7 @@ class KyoceraColors:
     STATUS_ERROR = "#dc3545"          # Red for errors
     STATUS_INFO_TEXT = "#0dcaf0"      # Cyan for informational link buttons
 
-    # Backwards compatibility aliases
+    # Legacy aliases for backward compatibility
     BACKGROUND_WIDGET = WIDGET_BG
     KYOCERA_BLACK = "#000000"
     TEXT_PRIMARY = TEXT_DARK
