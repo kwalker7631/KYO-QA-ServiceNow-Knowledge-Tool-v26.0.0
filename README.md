@@ -226,7 +226,7 @@ python scripts/sample_job.py --input test_data.json
 
 ## Testing & Linting
 
-- Run tests:
+- All unit tests live in the `tests/` folder. Run them with:
   ```bash
   pytest --maxfail=1 --disable-warnings -q
   ```
