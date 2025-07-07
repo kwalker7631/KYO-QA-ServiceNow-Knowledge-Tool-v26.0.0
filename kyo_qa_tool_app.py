@@ -203,17 +203,6 @@ class KyoQAToolApp(tk.Tk):
         if path:
             self.selected_excel.set(path)
 
-    def pause_processing(self):
-        """Pause the ongoing processing thread."""
-        if hasattr(self, "pause_event"):
-            self.pause_event.set()
-        self.status_current_file.set("Processing paused")
-
-    def resume_processing(self):
-        """Resume a paused processing thread."""
-        if hasattr(self, "pause_event"):
-            self.pause_event.clear()
-        self.status_current_file.set("Resuming...")
 
     def browse_harvest_file(self):
         path = filedialog.askopenfilename(
