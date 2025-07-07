@@ -195,6 +195,14 @@ def create_controls_section(parent, app):
     )
     app.process_btn.grid(row=0, column=0, sticky="ew", ipady=8, pady=(0, 10))
 
+    # Button to manually export cached results to Excel
+    app.export_btn = ttk.Button(
+        controls_frame,
+        text="Export to XLSX",
+        command=app.manual_export,
+    )
+    app.export_btn.grid(row=1, column=0, sticky="ew")
+
 
 def create_live_status_section(parent, app):
     container = ttk.Frame(parent, padding=10)

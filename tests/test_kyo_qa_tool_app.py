@@ -73,6 +73,9 @@ class DummyVar:
     def set(self, val):
         self.value = val
 
+    def get(self):
+        return self.value
+
 
 def test_pause_resume_events(monkeypatch):
     app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
@@ -108,3 +111,36 @@ def test_process_response_queue_updates_status(monkeypatch):
     app.process_response_queue()
 
     assert app.status_current_file.value == "Harvesting record 5 of 20..."
+
+
+def test_manual_export_reads_cache_and_updates_status(tmp_path, monkeypatch):
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    result_data = {"filename": "doc.pdf", "models": "m1", "author": "a", "status": "Pass"}
+    with open(cache_dir / "doc.json", "w", encoding="utf-8") as f:
+        json.dump(result_data, f)
+
+    monkeypatch.setattr(kyo_qa_tool_app, "CACHE_DIR", cache_dir, raising=False)
+
+    exported = {}
+
+    def fake_export(results, excel, queue):
+        exported["results"] = results
+        return Path("out.xlsx")
+
+    monkeypatch.setattr(kyo_qa_tool_app, "export_to_excel", fake_export)
+
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app.selected_excel = DummyVar()
+    app.selected_excel.set("template.xlsx")
+    app.status_current_file = DummyVar()
+    app.response_queue = queue.Queue()
+
+    monkeypatch.setattr(kyo_qa_tool_app.messagebox, "showwarning", lambda *a, **k: None)
+    monkeypatch.setattr(kyo_qa_tool_app.messagebox, "showinfo", lambda *a, **k: None)
+    monkeypatch.setattr(kyo_qa_tool_app.messagebox, "showerror", lambda *a, **k: None)
+
+    app.manual_export()
+
+    assert exported["results"][0]["filename"] == "doc.pdf"
+    assert app.status_current_file.value.startswith("Export complete")
