@@ -109,12 +109,8 @@ def setup_high_contrast_styles(app):
         background=KyoceraColors.WIDGET_BG,
         font=("Segoe UI", 14, "bold"),
     )
-    style.configure("TNotebook", background=KyoceraColors.HIGH_CONTRAST_BG)
-    style.configure(
-        "TNotebook.Tab",
-        background=KyoceraColors.HIGH_CONTRAST_BG,
-        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
-    )
+# High-contrast styles for TNotebook moved to setup_high_contrast_styles
+# See setup_high_contrast_styles for centralized style configuration.
 
 
 def create_main_header(parent, version):
