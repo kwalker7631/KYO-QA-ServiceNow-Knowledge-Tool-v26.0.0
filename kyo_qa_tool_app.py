@@ -11,6 +11,7 @@ import queue
 import time
 import sys
 import os
+import json
 
 from processing_engine import process_job
 from file_utils import (
@@ -29,7 +30,9 @@ from gui_components import (
     create_controls_section,
     create_live_status_section,
     create_footer,
+    create_review_tab,
 )
+from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
@@ -55,6 +58,7 @@ class KyoQAToolApp(tk.Tk):
         self.selected_folder = tk.StringVar()
         self.selected_excel = tk.StringVar()
         self.selected_files_list = []
+        self.review_filter = tk.StringVar(value="All")
 
         self.status_current_file = tk.StringVar(value="Ready to start.")
         self.progress_value = tk.DoubleVar(value=0)
@@ -81,13 +85,24 @@ class KyoQAToolApp(tk.Tk):
         self.bind("<Escape>", self.exit_fullscreen)
 
     def _create_widgets(self):
-        main_frame = ttk.Frame(self)
-        main_frame.pack(fill="both", expand=True)
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True)
 
-        create_main_header(main_frame, VERSION)
-        create_io_section(main_frame, self)
-        create_controls_section(main_frame, self)
-        create_live_status_section(main_frame, self)
+        self.notebook = ttk.Notebook(container)
+        self.notebook.pack(fill="both", expand=True)
+
+        process_tab = ttk.Frame(self.notebook)
+        review_tab = ttk.Frame(self.notebook)
+        self.notebook.add(process_tab, text="Process")
+        self.notebook.add(review_tab, text="Review")
+
+        create_main_header(process_tab, VERSION)
+        create_io_section(process_tab, self)
+        create_controls_section(process_tab, self)
+        create_live_status_section(process_tab, self)
+
+        create_review_tab(review_tab, self)
+
         create_footer(self, self)
 
     def log_message(self, message, level="info"):
@@ -207,8 +222,6 @@ class KyoQAToolApp(tk.Tk):
         self.process_btn.config(state=tk.DISABLED)
         self.spinner_running = True
         threading.Thread(target=self._spinner_worker, daemon=True).start()
-        if hasattr(self, "footer_spinner"):
-            self.footer_spinner.config(text="|")
         for var in [
             self.count_processed,
             self.count_pass,
@@ -228,8 +241,6 @@ class KyoQAToolApp(tk.Tk):
         self.spinner_running = False
         if hasattr(self, "spinner_label"):
             self.spinner_label.config(text="")
-        if hasattr(self, "footer_spinner"):
-            self.footer_spinner.config(text="")
         if self.temp_dir_to_clean:
             cleanup_directory(self.temp_dir_to_clean)
             self.temp_dir_to_clean = None
@@ -250,8 +261,6 @@ class KyoQAToolApp(tk.Tk):
                 continue
             if hasattr(self, "spinner_label"):
                 self.spinner_label.config(text=frames[idx % len(frames)])
-            if hasattr(self, "footer_spinner"):
-                self.footer_spinner.config(text=frames[idx % len(frames)])
             idx += 1
             time.sleep(0.1)
 
@@ -266,6 +275,31 @@ class KyoQAToolApp(tk.Tk):
         )
         if review_info:
             ReviewWindow(self, "MODEL_PATTERNS", "Model Patterns", review_info)
+
+    def load_review_data(self):
+        filter_status = (
+            self.review_filter.get() if hasattr(self, "review_filter") else "All"
+        )
+        if hasattr(self, "review_table"):
+            self.review_table.delete(*self.review_table.get_children())
+        for json_file in CACHE_DIR.glob("*.json"):
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed loading {json_file}: {e}")
+                continue
+            status = data.get("status", "Unknown")
+            if filter_status != "All" and status != filter_status:
+                continue
+            if hasattr(self, "review_table"):
+                iid = self.review_table.insert(
+                    "", "end", values=(data.get("filename"), status)
+                )
+                if status == "Needs Review":
+                    self.review_table.item(iid, tags=("review",))
+                elif status == "Fail":
+                    self.review_table.item(iid, tags=("fail",))
 
     def process_response_queue(self):
         try:
@@ -303,11 +337,6 @@ class KyoQAToolApp(tk.Tk):
                     self.update_ui_for_finish(
                         msg.get("status", "Complete"), msg.get("data")
                     )
-                    data = msg.get("data", {})
-                    if data and data.get("output_path"):
-                        self.status_current_file.set(
-                            f"Export complete: {Path(data['output_path']).name}"
-                        )
         except queue.Empty:
             pass
         finally:
