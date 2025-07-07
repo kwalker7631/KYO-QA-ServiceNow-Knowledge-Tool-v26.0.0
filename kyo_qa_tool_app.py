@@ -10,9 +10,13 @@ import threading
 import queue
 import time
 import sys
+import os
 import json
 
-import processing_engine  # noqa: F401 - used for monkeypatching in tests
+from processing_engine import process_job
+from ocr_utils import extract_text_from_pdf
+from data_harvesters import harvest_all_data
+from utils import ExcelGenerator
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -31,6 +35,7 @@ from gui_components import (
     create_live_status_section,
     create_footer,
     create_review_tab,
+    create_harvest_tab,
 )
 
 logger = logging_utils.setup_logger("app")
@@ -92,8 +97,10 @@ class KyoQAToolApp(tk.Tk):
 
         process_tab = ttk.Frame(self.notebook)
         review_tab = ttk.Frame(self.notebook)
+        harvest_tab = ttk.Frame(self.notebook)
         self.notebook.add(process_tab, text="Process")
         self.notebook.add(review_tab, text="Review")
+        self.notebook.add(harvest_tab, text="Harvest")
 
         create_main_header(process_tab, VERSION)
         create_io_section(process_tab, self)
@@ -101,6 +108,7 @@ class KyoQAToolApp(tk.Tk):
         create_live_status_section(process_tab, self)
 
         create_review_tab(review_tab, self)
+        create_harvest_tab(harvest_tab, self)
 
         create_footer(self, self)
 
@@ -207,6 +215,11 @@ class KyoQAToolApp(tk.Tk):
             self.pause_event.clear()
         self.status_current_file.set("Resuming...")
 
+    def browse_harvest_file(self):
+        path = filedialog.askopenfilename(title="Select PDF File", filetypes=[("PDF Files", "*.pdf")])
+        if path:
+            self.harvest_file.set(path)
+
     def on_closing(self):
         if self.is_processing and not messagebox.askyesno(
             "Exit Confirmation", "A job is running. Are you sure you want to exit?"
@@ -227,6 +240,20 @@ class KyoQAToolApp(tk.Tk):
     def exit_fullscreen(self, event=None):
         if self.is_fullscreen:
             self.toggle_fullscreen()
+
+    def pause_processing(self):
+        """Pause the current job."""
+        if not self.pause_event.is_set():
+            self.pause_event.set()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        """Resume a paused job."""
+        if self.pause_event.is_set():
+            self.pause_event.clear()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Resuming...")
 
     def update_ui_for_start(self):
         self.is_processing = True
@@ -279,6 +306,62 @@ class KyoQAToolApp(tk.Tk):
             idx += 1
             time.sleep(0.1)
 
+    def harvest_single_file(self):
+        path_str = self.harvest_file.get()
+        if not path_str:
+            messagebox.showwarning("Input Missing", "Please select a PDF file to harvest.")
+            return
+        pdf = Path(path_str)
+        if not pdf.exists():
+            messagebox.showerror("File Not Found", f"{pdf} does not exist")
+            return
+        self.spinner_running = True
+        threading.Thread(target=self._spinner_worker, daemon=True).start()
+        threading.Thread(target=self._harvest_worker, args=(pdf,), daemon=True).start()
+
+    def _harvest_worker(self, pdf):
+        try:
+            self.status_current_file.set(f"Harvesting {pdf.name}...")
+            text = extract_text_from_pdf(str(pdf.resolve()))
+            data = harvest_all_data(text, pdf.name)
+            self.harvest_results = [{"filename": pdf.name, **data}]
+            result_text = f"Models: {data.get('models')}\nAuthor: {data.get('author')}"
+            self.harvest_text.config(state=tk.NORMAL)
+            self.harvest_text.delete("1.0", tk.END)
+            self.harvest_text.insert("1.0", result_text)
+            self.harvest_text.config(state=tk.DISABLED)
+            self.harvest_export_btn.config(state=tk.NORMAL)
+            self.status_current_file.set("Harvest complete")
+        except Exception as e:
+            self.status_current_file.set(f"Harvest failed: {e}")
+            messagebox.showerror("Harvest Error", str(e))
+            self.harvest_results = []
+            self.harvest_export_btn.config(state=tk.DISABLED)
+        finally:
+            self.spinner_running = False
+
+    def export_harvest_results(self):
+        if not getattr(self, "harvest_results", None):
+            messagebox.showinfo("No Data", "Nothing to export.")
+            return
+        try:
+            pdf = Path(self.harvest_file.get())
+            out_path = pdf.with_name(pdf.stem + "_harvest.xlsx")
+            ExcelGenerator(str(out_path)).create_report(self.harvest_results)
+            self.status_current_file.set(f"Export complete: {out_path}")
+        except Exception as e:
+            messagebox.showerror("Export Error", str(e))
+            self.status_current_file.set(f"Export failed: {e}")
+            self.harvest_export_btn.config(state=tk.DISABLED)
+
+    def pause_processing(self):
+        self.pause_event.set()
+        self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        self.pause_event.clear()
+        self.status_current_file.set("Resuming...")
+
     def open_review_for_selected_file(self):
         selection = self.review_tree.selection()
         if not selection:
@@ -297,20 +380,8 @@ class KyoQAToolApp(tk.Tk):
         )
         if hasattr(self, "review_table"):
             self.review_table.delete(*self.review_table.get_children())
-
-        json_files = list(CACHE_DIR.glob("*.json"))
-        total = len(json_files)
         loaded = 0
-
-        self.spinner_running = True
-        threading.Thread(target=self._spinner_worker, daemon=True).start()
-        if hasattr(self, "progress_bar"):
-            self.progress_bar.start(10)
-        self.status_current_file.set("Loading review data...")
-        self.progress_value.set(0)
-        self.progress_percent_var.set("0%")
-
-        for json_file in json_files:
+        for json_file in CACHE_DIR.glob("*.json"):
             try:
                 with open(json_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -324,71 +395,13 @@ class KyoQAToolApp(tk.Tk):
                 iid = self.review_table.insert(
                     "", "end", values=(data.get("filename"), status)
                 )
+                loaded += 1
                 if status == "Needs Review":
                     self.review_table.item(iid, tags=("review",))
                 elif status == "Fail":
                     self.review_table.item(iid, tags=("fail",))
-            loaded += 1
-            if total:
-                val = loaded / total * 100
-                self.progress_value.set(val)
-                self.progress_percent_var.set(f"{int(val)}%")
-            self.status_current_file.set(f"Review loaded {loaded} item(s)...")
-            if vars(self).get("tk"):
-                self.update_idletasks()
-
-        self.status_current_file.set(f"Review loaded {loaded} items.")
-        self.spinner_running = False
-        if hasattr(self, "spinner_label"):
-            self.spinner_label.config(text="")
-        if hasattr(self, "progress_bar"):
-            self.progress_bar.stop()
-        self.progress_value.set(0)
-        self.progress_percent_var.set("0%")
-
-    def manual_export(self):
-        """Export cached results to an Excel file using the existing spinner and progress bar."""
-        excel_path = filedialog.askopenfilename(
-            title="Select Excel Template",
-            filetypes=[("Excel Files", "*.xlsx *.xlsm")],
-        )
-        if not excel_path:
-            return
-
-        results = []
-        for json_file in CACHE_DIR.glob("*.json"):
-            try:
-                with open(json_file, "r", encoding="utf-8") as f:
-                    results.append(json.load(f))
-            except Exception as e:
-                logger.error(f"Failed loading {json_file}: {e}")
-
-        self.spinner_running = True
-        threading.Thread(target=self._spinner_worker, daemon=True).start()
-        if hasattr(self, "progress_bar"):
-            self.progress_bar.start(10)
-        self.status_current_file.set("Exporting to Excel...")
-        self.progress_value.set(0)
-        self.progress_percent_var.set("0%")
-
-        import processing_engine as pe
-
-        output_path = pe.export_to_excel(
-            results, Path(excel_path), queue.Queue()
-        )
-
-        self.spinner_running = False
-        if hasattr(self, "spinner_label"):
-            self.spinner_label.config(text="")
-        if hasattr(self, "progress_bar"):
-            self.progress_bar.stop()
-        self.progress_value.set(0)
-        self.progress_percent_var.set("0%")
-        if output_path:
-            self.status_current_file.set(f"Export complete: {output_path.name}")
-            open_file_in_default_app(output_path)
-        else:
-            self.status_current_file.set("Export failed.")
+        if loaded == 0:
+            messagebox.showinfo("Review", "No items found for the selected filter.")
 
     def process_response_queue(self):
         try:

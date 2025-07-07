@@ -1,6 +1,6 @@
 # gui_components.py
-# Version: 32.2.0
-# Last modified: 2025-07-06
+# Version: 32.3.0
+# Last modified: 2025-07-07
 
 import tkinter as tk
 from tkinter import ttk
@@ -70,6 +70,23 @@ def setup_high_contrast_styles(app):
         "Footer.TButton",
         background=[("active", "#e2e6ea")],
         bordercolor=[("!active", KyoceraColors.BACKGROUND_MAIN)],
+    )
+    style.configure(
+        "Exit.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+        font=("Segoe UI", 10, "bold"),
+        padding=(5, 3),
+    )
+    style.map(
+        "Exit.TButton",
+        background=[("active", KyoceraColors.HIGH_CONTRAST_BG)],
+        foreground=[("active", KyoceraColors.HIGH_CONTRAST_TEXT)],
+    )
+    style.configure(
+        "Exit.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
     )
     style.configure(
         "Treeview",
@@ -310,8 +327,49 @@ def create_footer(parent, app):
         footer_frame,
         text="Exit Application",
         command=app.on_closing,
-        style="Footer.TButton",
+        style="Exit.TButton",
     ).pack(side="right")
+
+def create_harvest_tab(parent, app):
+    harvest_frame = ttk.Frame(parent, padding=15)
+    harvest_frame.pack(fill="both", expand=True)
+
+    select_frame = ttk.Frame(harvest_frame)
+    select_frame.pack(fill="x")
+    app.harvest_file = tk.StringVar()
+    ttk.Entry(
+        select_frame,
+        textvariable=app.harvest_file,
+        font=("Segoe UI", 10),
+    ).pack(side="left", fill="x", expand=True, padx=5)
+    ttk.Button(select_frame, text="Browse...", command=app.browse_harvest_file).pack(
+        side="left", padx=5
+    )
+
+    btn_frame = ttk.Frame(harvest_frame)
+    btn_frame.pack(fill="x", pady=10)
+    app.harvest_run_btn = ttk.Button(
+        btn_frame, text="Harvest Data", command=app.harvest_single_file
+    )
+    app.harvest_run_btn.pack(side="left")
+    app.harvest_export_btn = ttk.Button(
+        btn_frame,
+        text="Export to XLSX",
+        command=app.export_harvest_results,
+        state=tk.DISABLED,
+    )
+    app.harvest_export_btn.pack(side="left", padx=5)
+
+    app.harvest_text = tk.Text(
+        harvest_frame,
+        wrap=tk.WORD,
+        state=tk.DISABLED,
+        bg=KyoceraColors.HIGH_CONTRAST_BG,
+        fg=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    app.harvest_text.pack(fill="both", expand=True)
+
+    return harvest_frame
 
 def create_review_tab(parent, app):
     review_frame = ttk.Frame(parent, padding=15)
@@ -346,3 +404,40 @@ def create_review_tab(parent, app):
     app.review_table.tag_configure("fail", style="FailRow")
 
     return review_frame
+
+
+def create_data_harvest_tab(parent, app):
+    """Builds the UI for the Data Harvest tab."""
+    style = ttk.Style(parent)
+    style.configure(
+        "Harvest.TFrame",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+    )
+    style.configure(
+        "Harvest.TLabel",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    style.configure(
+        "Harvest.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+
+    harvest_frame = ttk.Frame(parent, padding=20, style="Harvest.TFrame")
+    harvest_frame.pack(fill="both", expand=True)
+
+    ttk.Label(
+        harvest_frame,
+        text="Data harvesting tools will appear here.",
+        style="Harvest.TLabel",
+    ).pack(pady=10)
+
+    ttk.Button(
+        harvest_frame,
+        text="Start Harvest",
+        style="Harvest.TButton",
+        command=lambda: None,
+    ).pack(pady=5)
+
+    return harvest_frame
