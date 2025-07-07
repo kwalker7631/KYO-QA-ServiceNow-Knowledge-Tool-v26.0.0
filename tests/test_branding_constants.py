@@ -12,6 +12,8 @@ EXPECTED_COLORS = {
     "WIDGET_BG": "#FFFFFF",
     "TEXT_DARK": "#212529",
     "TEXT_MUTED": "#6c757d",
+    "HIGH_CONTRAST_BG": "#000000",
+    "HIGH_CONTRAST_TEXT": "#FFFFFF",
     "PRIMARY_ACTION": "#0d6efd",
     "PRIMARY_ACTION_HOVER": "#0b5ed7",
     "BORDER_COLOR": "#ced4da",

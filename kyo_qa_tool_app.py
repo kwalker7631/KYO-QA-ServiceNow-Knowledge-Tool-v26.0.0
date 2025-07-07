@@ -13,7 +13,7 @@ import sys
 import os
 import json
 
-from processing_engine import process_job, export_to_excel
+from processing_engine import process_job
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -31,7 +31,9 @@ from gui_components import (
     create_controls_section,
     create_live_status_section,
     create_footer,
+    create_review_tab,
 )
+from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
@@ -57,6 +59,7 @@ class KyoQAToolApp(tk.Tk):
         self.selected_folder = tk.StringVar()
         self.selected_excel = tk.StringVar()
         self.selected_files_list = []
+        self.review_filter = tk.StringVar(value="All")
 
         self.status_current_file = tk.StringVar(value="Ready to start.")
         self.progress_value = tk.DoubleVar(value=0)
@@ -83,13 +86,24 @@ class KyoQAToolApp(tk.Tk):
         self.bind("<Escape>", self.exit_fullscreen)
 
     def _create_widgets(self):
-        main_frame = ttk.Frame(self)
-        main_frame.pack(fill="both", expand=True)
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True)
 
-        create_main_header(main_frame, VERSION)
-        create_io_section(main_frame, self)
-        create_controls_section(main_frame, self)
-        create_live_status_section(main_frame, self)
+        self.notebook = ttk.Notebook(container)
+        self.notebook.pack(fill="both", expand=True)
+
+        process_tab = ttk.Frame(self.notebook)
+        review_tab = ttk.Frame(self.notebook)
+        self.notebook.add(process_tab, text="Process")
+        self.notebook.add(review_tab, text="Review")
+
+        create_main_header(process_tab, VERSION)
+        create_io_section(process_tab, self)
+        create_controls_section(process_tab, self)
+        create_live_status_section(process_tab, self)
+
+        create_review_tab(review_tab, self)
+
         create_footer(self, self)
 
     def log_message(self, message, level="info"):
@@ -181,42 +195,6 @@ class KyoQAToolApp(tk.Tk):
         if path:
             self.selected_excel.set(path)
 
-    def export_cached_results(self):
-        excel_path = self.selected_excel.get()
-        if not excel_path:
-            messagebox.showwarning(
-                "Input Missing", "Please select an Excel template file."
-            )
-            return
-
-        try:
-            results = []
-            for json_file in CACHE_DIR.glob("*.json"):
-                with open(json_file, "r", encoding="utf-8") as f:
-                    results.append(json.load(f))
-
-            q = queue.Queue()
-            output_path = export_to_excel(results, Path(excel_path), q)
-            while not q.empty():
-                msg = q.get()
-                if msg.get("type") == "log":
-                    self.log_message(msg.get("msg", ""), msg.get("tag", "info"))
-
-            if output_path:
-                self.log_message(f"Excel file exported to: {output_path}", "success")
-                messagebox.showinfo(
-                    "Export Complete", f"Results exported to:\n{output_path}"
-                )
-            else:
-                self.log_message("Failed to export results to Excel.", "error")
-                messagebox.showerror(
-                    "Export Failed",
-                    "Failed to export results to Excel. See log for details.",
-                )
-        except Exception as e:
-            self.log_message(f"Export failed: {e}", "error")
-            messagebox.showerror("Export Failed", f"Could not export results:\n{e}")
-
     def on_closing(self):
         if self.is_processing and not messagebox.askyesno(
             "Exit Confirmation", "A job is running. Are you sure you want to exit?"
@@ -275,16 +253,6 @@ class KyoQAToolApp(tk.Tk):
             ):
                 open_file_in_default_app(data["output_path"])
 
-    def pause_processing(self):
-        self.pause_event.set()
-        self.status_current_file.set("Processing paused")
-        self.log_message("Processing paused", "info")
-
-    def resume_processing(self):
-        self.pause_event.clear()
-        self.status_current_file.set("Resuming...")
-        self.log_message("Resuming processing", "info")
-
     def _spinner_worker(self):
         frames = "|/-\\"
         idx = 0
@@ -308,6 +276,31 @@ class KyoQAToolApp(tk.Tk):
         )
         if review_info:
             ReviewWindow(self, "MODEL_PATTERNS", "Model Patterns", review_info)
+
+    def load_review_data(self):
+        filter_status = (
+            self.review_filter.get() if hasattr(self, "review_filter") else "All"
+        )
+        if hasattr(self, "review_table"):
+            self.review_table.delete(*self.review_table.get_children())
+        for json_file in CACHE_DIR.glob("*.json"):
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed loading {json_file}: {e}")
+                continue
+            status = data.get("status", "Unknown")
+            if filter_status != "All" and status != filter_status:
+                continue
+            if hasattr(self, "review_table"):
+                iid = self.review_table.insert(
+                    "", "end", values=(data.get("filename"), status)
+                )
+                if status == "Needs Review":
+                    self.review_table.item(iid, tags=("review",))
+                elif status == "Fail":
+                    self.review_table.item(iid, tags=("fail",))
 
     def process_response_queue(self):
         try:
