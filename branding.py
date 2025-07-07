@@ -20,6 +20,10 @@ class KyoceraColors:
     PRIMARY_ACTION_HOVER = "#0b5ed7"  # A darker blue for hover
     
     BORDER_COLOR = "#ced4da"          # A clear border color for widgets
+
+    # --- High Contrast Variants ---
+    HIGH_CONTRAST_BG = "#000000"      # Pure black background for accessibility
+    HIGH_CONTRAST_TEXT = "#FFFFFF"    # White text for maximum contrast
     
     # --- Status Colors ---
     STATUS_SUCCESS = "#198754"        # Green for success
