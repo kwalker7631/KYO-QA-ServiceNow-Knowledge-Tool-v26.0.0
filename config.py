@@ -12,23 +12,6 @@ from branding import KyoceraColors
 # Initialize logging
 logger = logging.getLogger('config')
 
-# --- Load Custom Patterns ---
-# Define pattern variables with default empty values first.
-MODEL_PATTERNS = []
-PART_NUMBER_PATTERNS = []
-QA_NUMBER_PATTERNS = []
-# Add any other pattern types you need here.
-
-# Now, try to overwrite the defaults with values from custom_patterns.py
-try:
-    from custom_patterns import *
-    logging.info("Successfully loaded custom patterns.")
-except ImportError:
-    logging.warning("Could not import from custom_patterns.py. Using default empty patterns.")
-except Exception as e:
-    logging.error(f"An unexpected error occurred while loading custom patterns: {e}")
-
-
 # --- Directory Constants ---
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / 'output'
@@ -40,7 +23,6 @@ NEED_REVIEW_DIR = OUTPUT_DIR
 CONFIG_FILE = BASE_DIR / 'config.json'
 
 # --- GUI and App Color Configuration ---
-# FIXED: Updated to use the new color definitions from branding.py
 BRAND_COLORS = {
     "background": KyoceraColors.BACKGROUND_MAIN,
     "widget_bg": KyoceraColors.BACKGROUND_WIDGET,

@@ -1,14 +1,15 @@
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-pandas
+# requirements.txt
+# Version: 32.3.0
+# Last modified: 2025-07-06
+
+# Core dependencies for PDF and Excel processing.
+# The application uses its own internal 'file_utils.py' module.
+# Do NOT add 'file-utils' to this list, as it is an incorrect
+# external package that requires the Rust compiler.
+
 openpyxl
 Pillow
-pytesseract
-pypdf
-pdf2image
-anthropic
 PyMuPDF
-opencv-python
-colorama
-python-dateutil
+pytesseract
+opencv-python-headless
+colorama # For styled terminal output

@@ -1,11 +1,16 @@
 @echo off
-title KYO QA Tool Launcher v26.0.0
-echo Starting KYO QA ServiceNow Knowledge Tool v26.0.0...
-echo This console window will remain open during operation.
-python run.py
-if %errorlevel% neq 0 (
-    echo.
-    echo Error starting the application. Please check that Python is installed correctly.
-    echo.
-    pause
-)
+REM START.bat
+REM Version: 32.5.0
+REM Last modified: 2025-07-06
+REM This is the official script to launch the KYO QA ServiceNow Knowledge Tool.
+
+ECHO.
+ECHO --- Starting KYO QA ServiceNow Knowledge Tool ---
+ECHO.
+
+REM Run the correct and reliable Python startup script.
+python start_tool.py
+
+ECHO.
+ECHO --- Application has closed. ---
+pause
