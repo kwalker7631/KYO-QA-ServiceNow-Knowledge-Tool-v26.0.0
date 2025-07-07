@@ -13,7 +13,7 @@ import sys
 import os
 import json
 
-from processing_engine import process_job
+from processing_engine import process_job, export_to_excel
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -301,6 +301,35 @@ class KyoQAToolApp(tk.Tk):
                     self.review_table.item(iid, tags=("review",))
                 elif status == "Fail":
                     self.review_table.item(iid, tags=("fail",))
+
+    def manual_export(self):
+        """Export cached results to the selected Excel template."""
+        excel_path = self.selected_excel.get() if hasattr(self, "selected_excel") else ""
+        if not excel_path:
+            messagebox.showwarning("Input Missing", "Please select an Excel template file.")
+            return
+
+        results = []
+        for json_file in CACHE_DIR.glob("*.json"):
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    results.append(json.load(f))
+            except Exception as e:
+                logger.error(f"Failed loading {json_file}: {e}")
+
+        if not results:
+            messagebox.showinfo("No Data", "No results available for export.")
+            return
+
+        try:
+            output = export_to_excel(results, Path(excel_path), self.response_queue)
+            if output:
+                self.status_current_file.set(f"Export complete: {output}")
+            else:
+                messagebox.showerror("Export Error", "Failed to export to Excel.")
+        except Exception as e:
+            logger.error("Manual export failed", exc_info=True)
+            messagebox.showerror("Export Error", str(e))
 
     def process_response_queue(self):
         try:
