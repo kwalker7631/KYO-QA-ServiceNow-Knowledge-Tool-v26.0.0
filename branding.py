@@ -40,3 +40,7 @@ class KyoceraColors:
     TEXT_SECONDARY = TEXT_MUTED
     PRIMARY_BLUE = PRIMARY_ACTION
     STATUS_INFO = STATUS_INFO_TEXT
+
+    # --- High Contrast Theme ---
+    HIGH_CONTRAST_BG = "#000000"
+    HIGH_CONTRAST_TEXT = "#FFFFFF"
