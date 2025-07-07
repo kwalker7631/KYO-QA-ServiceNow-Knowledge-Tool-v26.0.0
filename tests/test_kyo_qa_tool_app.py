@@ -19,12 +19,14 @@ sys.modules.setdefault("pytesseract", pytesseract_mod)
 import kyo_qa_tool_app  # noqa: E402
 
 if not hasattr(kyo_qa_tool_app, "KyoQAToolApp"):
+
     class KyoQAToolApp:
         pass
 
     kyo_qa_tool_app.KyoQAToolApp = KyoQAToolApp
 
 if not hasattr(kyo_qa_tool_app.KyoQAToolApp, "_collect_review_pdfs"):
+
     def _collect_review_pdfs(self):
         pdfs = []
         for txt in kyo_qa_tool_app.PDF_TXT_DIR.glob("*.txt"):
@@ -86,3 +88,45 @@ def test_pause_resume_events(monkeypatch):
     assert not app.pause_event.is_set()
     assert app.status_current_file.value == "Resuming..."
 
+
+class VarStub:
+    def __init__(self, val=""):
+        self.val = val
+
+    def set(self, val):
+        self.val = val
+
+    def get(self):
+        return self.val
+
+
+def test_export_cached_results_calls_export(monkeypatch, tmp_path):
+    (tmp_path / "data.json").write_text("{}", encoding="utf-8")
+
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app.selected_excel = VarStub(str(tmp_path / "template.xlsx"))
+    app.log_message = lambda *a, **k: None
+
+    monkeypatch.setattr(kyo_qa_tool_app, "CACHE_DIR", tmp_path, raising=False)
+
+    called = {}
+
+    def fake_export(results, excel_path, q):
+        called["results"] = results
+        called["path"] = excel_path
+        return excel_path
+
+    monkeypatch.setattr(kyo_qa_tool_app, "export_to_excel", fake_export)
+    monkeypatch.setattr(
+        kyo_qa_tool_app,
+        "messagebox",
+        types.SimpleNamespace(
+            showinfo=lambda *a, **k: None,
+            showerror=lambda *a, **k: None,
+            showwarning=lambda *a, **k: None,
+        ),
+    )
+
+    app.export_cached_results()
+    assert called["results"] == [{}]
+    assert called["path"] == Path(app.selected_excel.get())
