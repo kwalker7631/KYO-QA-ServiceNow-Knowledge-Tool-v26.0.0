@@ -313,7 +313,6 @@ def create_footer(parent, app):
         style="Footer.TButton",
     ).pack(side="right")
 
-
 def create_review_tab(parent, app):
     review_frame = ttk.Frame(parent, padding=15)
     review_frame.pack(fill="both", expand=True)

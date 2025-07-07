@@ -89,7 +89,6 @@ def test_pause_resume_events(monkeypatch):
     assert not app.pause_event.is_set()
     assert app.status_current_file.value == "Resuming..."
 
-
 def test_process_response_queue_updates_status(monkeypatch):
     app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
     app.response_queue = queue.Queue()
