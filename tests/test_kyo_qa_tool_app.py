@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import types
 import threading
+import queue
 from tests.openpyxl_stub import ensure_openpyxl_stub
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -19,12 +20,14 @@ sys.modules.setdefault("pytesseract", pytesseract_mod)
 import kyo_qa_tool_app  # noqa: E402
 
 if not hasattr(kyo_qa_tool_app, "KyoQAToolApp"):
+
     class KyoQAToolApp:
         pass
 
     kyo_qa_tool_app.KyoQAToolApp = KyoQAToolApp
 
 if not hasattr(kyo_qa_tool_app.KyoQAToolApp, "_collect_review_pdfs"):
+
     def _collect_review_pdfs(self):
         pdfs = []
         for txt in kyo_qa_tool_app.PDF_TXT_DIR.glob("*.txt"):
@@ -86,3 +89,23 @@ def test_pause_resume_events(monkeypatch):
     assert not app.pause_event.is_set()
     assert app.status_current_file.value == "Resuming..."
 
+
+def test_process_response_queue_updates_status(monkeypatch):
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app.response_queue = queue.Queue()
+    app.status_current_file = DummyVar()
+    app.log_message = lambda *a, **k: None
+    app.update_ui_for_finish = lambda *a, **k: None
+    app.count_processed = DummyVar()
+    app.count_pass = DummyVar()
+    app.count_fail = DummyVar()
+    app.count_review = DummyVar()
+    app.count_ocr = DummyVar()
+    app.reviewable_files = []
+    app.review_tree = types.SimpleNamespace(insert=lambda *a, **k: None)
+    app.after = lambda *a, **k: None
+
+    app.response_queue.put({"type": "status", "msg": "Harvesting record 5 of 20..."})
+    app.process_response_queue()
+
+    assert app.status_current_file.value == "Harvesting record 5 of 20..."
