@@ -33,7 +33,6 @@ from gui_components import (
     create_footer,
     create_review_tab,
 )
-from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
