@@ -72,6 +72,18 @@ def setup_high_contrast_styles(app):
         bordercolor=[("!active", KyoceraColors.BACKGROUND_MAIN)],
     )
     style.configure(
+        "Exit.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+        font=("Segoe UI", 10, "bold"),
+        padding=(5, 3),
+    )
+    style.map(
+        "Exit.TButton",
+        background=[("active", KyoceraColors.HIGH_CONTRAST_BG)],
+        foreground=[("active", KyoceraColors.HIGH_CONTRAST_TEXT)],
+    )
+    style.configure(
         "Treeview",
         rowheight=28,
         fieldbackground=KyoceraColors.WIDGET_BG,
@@ -310,8 +322,50 @@ def create_footer(parent, app):
         footer_frame,
         text="Exit Application",
         command=app.on_closing,
-        style="Footer.TButton",
+        style="Exit.TButton",
     ).pack(side="right")
+
+
+def create_harvest_tab(parent, app):
+    harvest_frame = ttk.Frame(parent, padding=15)
+    harvest_frame.pack(fill="both", expand=True)
+
+    select_frame = ttk.Frame(harvest_frame)
+    select_frame.pack(fill="x")
+    app.harvest_file = tk.StringVar()
+    ttk.Entry(
+        select_frame,
+        textvariable=app.harvest_file,
+        font=("Segoe UI", 10),
+    ).pack(side="left", fill="x", expand=True, padx=5)
+    ttk.Button(select_frame, text="Browse...", command=app.browse_harvest_file).pack(
+        side="left", padx=5
+    )
+
+    btn_frame = ttk.Frame(harvest_frame)
+    btn_frame.pack(fill="x", pady=10)
+    app.harvest_run_btn = ttk.Button(
+        btn_frame, text="Harvest Data", command=app.harvest_single_file
+    )
+    app.harvest_run_btn.pack(side="left")
+    app.harvest_export_btn = ttk.Button(
+        btn_frame,
+        text="Export to XLSX",
+        command=app.export_harvest_results,
+        state=tk.DISABLED,
+    )
+    app.harvest_export_btn.pack(side="left", padx=5)
+
+    app.harvest_text = tk.Text(
+        harvest_frame,
+        wrap=tk.WORD,
+        state=tk.DISABLED,
+        bg=KyoceraColors.HIGH_CONTRAST_BG,
+        fg=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    app.harvest_text.pack(fill="both", expand=True)
+
+    return harvest_frame
 
 def create_review_tab(parent, app):
     review_frame = ttk.Frame(parent, padding=15)
