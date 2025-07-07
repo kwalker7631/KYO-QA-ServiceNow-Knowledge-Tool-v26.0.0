@@ -11,6 +11,7 @@ import queue
 import time
 import sys
 import os
+import json
 
 from processing_engine import process_job
 from file_utils import (
@@ -29,8 +30,9 @@ from gui_components import (
     create_controls_section,
     create_live_status_section,
     create_footer,
+    create_review_tab,
 )
-from branding import KyoceraColors
+from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
@@ -56,6 +58,7 @@ class KyoQAToolApp(tk.Tk):
         self.selected_folder = tk.StringVar()
         self.selected_excel = tk.StringVar()
         self.selected_files_list = []
+        self.review_filter = tk.StringVar(value="All")
 
         self.status_current_file = tk.StringVar(value="Ready to start.")
         self.progress_value = tk.DoubleVar(value=0)
@@ -82,33 +85,23 @@ class KyoQAToolApp(tk.Tk):
         self.bind("<Escape>", self.exit_fullscreen)
 
     def _create_widgets(self):
-        style = ttk.Style(self)
-        style.configure("TNotebook", background=KyoceraColors.HIGH_CONTRAST_BG)
-        style.configure(
-            "TNotebook.Tab",
-            background=KyoceraColors.HIGH_CONTRAST_BG,
-            foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
-        )
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True)
 
-        notebook = ttk.Notebook(self)
-        notebook.pack(fill="both", expand=True)
+        self.notebook = ttk.Notebook(container)
+        self.notebook.pack(fill="both", expand=True)
 
-        main_frame = ttk.Frame(notebook)
-        notebook.add(main_frame, text="Main")
+        process_tab = ttk.Frame(self.notebook)
+        review_tab = ttk.Frame(self.notebook)
+        self.notebook.add(process_tab, text="Process")
+        self.notebook.add(review_tab, text="Review")
 
-        create_main_header(main_frame, VERSION)
-        create_io_section(main_frame, self)
-        create_controls_section(main_frame, self)
-        create_live_status_section(main_frame, self)
+        create_main_header(process_tab, VERSION)
+        create_io_section(process_tab, self)
+        create_controls_section(process_tab, self)
+        create_live_status_section(process_tab, self)
 
-        harvest_frame = ttk.Frame(notebook)
-        notebook.add(harvest_frame, text="Data Harvesting")
-        ttk.Label(
-            harvest_frame,
-            text="Data harvesting features will appear here.",
-            background=KyoceraColors.HIGH_CONTRAST_BG,
-            foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
-        ).pack(fill="both", expand=True, padx=20, pady=20)
+        create_review_tab(review_tab, self)
 
         create_footer(self, self)
 
@@ -282,6 +275,31 @@ class KyoQAToolApp(tk.Tk):
         )
         if review_info:
             ReviewWindow(self, "MODEL_PATTERNS", "Model Patterns", review_info)
+
+    def load_review_data(self):
+        filter_status = (
+            self.review_filter.get() if hasattr(self, "review_filter") else "All"
+        )
+        if hasattr(self, "review_table"):
+            self.review_table.delete(*self.review_table.get_children())
+        for json_file in CACHE_DIR.glob("*.json"):
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed loading {json_file}: {e}")
+                continue
+            status = data.get("status", "Unknown")
+            if filter_status != "All" and status != filter_status:
+                continue
+            if hasattr(self, "review_table"):
+                iid = self.review_table.insert(
+                    "", "end", values=(data.get("filename"), status)
+                )
+                if status == "Needs Review":
+                    self.review_table.item(iid, tags=("review",))
+                elif status == "Fail":
+                    self.review_table.item(iid, tags=("fail",))
 
     def process_response_queue(self):
         try:

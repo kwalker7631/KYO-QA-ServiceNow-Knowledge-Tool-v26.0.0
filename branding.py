@@ -15,6 +15,10 @@ class KyoceraColors:
     BACKGROUND_MAIN = "#F0F2F5"  # Light grey for the main window
     WIDGET_BG = "#FFFFFF"  # White for input fields and cards
 
+    # --- High Contrast Mode ---
+    HIGH_CONTRAST_BG = "#000000"  # Black background for accessibility
+    HIGH_CONTRAST_TEXT = "#FFFFFF"  # White text for accessibility
+
     TEXT_DARK = "#212529"  # Very dark grey for primary text
     TEXT_MUTED = "#6c757d"  # Muted grey for secondary labels
 

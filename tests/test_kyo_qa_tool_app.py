@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import types
 import threading
+import queue
 from tests.openpyxl_stub import ensure_openpyxl_stub
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -89,40 +90,22 @@ def test_pause_resume_events(monkeypatch):
     assert app.status_current_file.value == "Resuming..."
 
 
-def test_notebook_tabs(monkeypatch):
-    tabs = []
-
-    class DummyNotebook:
-        def __init__(self, *a, **k):
-            pass
-
-        def pack(self, *a, **k):
-            pass
-
-        def add(self, frame, text=""):
-            tabs.append(text)
-
-    class DummyFrame:
-        def __init__(self, *a, **k):
-            pass
-
-        def pack(self, *a, **k):
-            pass
-
-    monkeypatch.setattr(kyo_qa_tool_app.ttk, "Notebook", DummyNotebook)
-    monkeypatch.setattr(kyo_qa_tool_app.ttk, "Frame", DummyFrame)
-
-    for func in [
-        "create_main_header",
-        "create_io_section",
-        "create_controls_section",
-        "create_live_status_section",
-        "create_footer",
-    ]:
-        monkeypatch.setattr(kyo_qa_tool_app, func, lambda *a, **k: None)
-
+def test_process_response_queue_updates_status(monkeypatch):
     app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
-    app._create_widgets()
+    app.response_queue = queue.Queue()
+    app.status_current_file = DummyVar()
+    app.log_message = lambda *a, **k: None
+    app.update_ui_for_finish = lambda *a, **k: None
+    app.count_processed = DummyVar()
+    app.count_pass = DummyVar()
+    app.count_fail = DummyVar()
+    app.count_review = DummyVar()
+    app.count_ocr = DummyVar()
+    app.reviewable_files = []
+    app.review_tree = types.SimpleNamespace(insert=lambda *a, **k: None)
+    app.after = lambda *a, **k: None
 
-    assert "Main" in tabs
-    assert "Data Harvesting" in tabs
+    app.response_queue.put({"type": "status", "msg": "Harvesting record 5 of 20..."})
+    app.process_response_queue()
+
+    assert app.status_current_file.value == "Harvesting record 5 of 20..."

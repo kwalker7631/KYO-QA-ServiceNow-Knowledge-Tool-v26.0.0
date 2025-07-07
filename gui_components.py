@@ -109,8 +109,10 @@ def setup_high_contrast_styles(app):
         background=KyoceraColors.WIDGET_BG,
         font=("Segoe UI", 14, "bold"),
     )
-# High-contrast styles for TNotebook moved to setup_high_contrast_styles
-# See setup_high_contrast_styles for centralized style configuration.
+    style.configure("ReviewRow", background=KyoceraColors.STATUS_WARNING)
+    style.configure(
+        "FailRow", background=KyoceraColors.STATUS_ERROR, foreground="white"
+    )
 
 
 def create_main_header(parent, version):
@@ -310,3 +312,38 @@ def create_footer(parent, app):
         command=app.on_closing,
         style="Footer.TButton",
     ).pack(side="right")
+
+
+def create_review_tab(parent, app):
+    review_frame = ttk.Frame(parent, padding=15)
+    review_frame.pack(fill="both", expand=True)
+
+    filter_frame = ttk.Frame(review_frame)
+    filter_frame.pack(fill="x", pady=(0, 10))
+
+    ttk.Label(filter_frame, text="Status Filter:", style="Card.TLabel").pack(
+        side="left"
+    )
+    app.review_filter = tk.StringVar(value="All")
+    status_box = ttk.Combobox(
+        filter_frame,
+        textvariable=app.review_filter,
+        state="readonly",
+        values=["All", "Pass", "Needs Review", "Fail"],
+        width=15,
+    )
+    status_box.pack(side="left", padx=5)
+    ttk.Button(filter_frame, text="Load", command=app.load_review_data).pack(
+        side="left", padx=5
+    )
+
+    app.review_table = ttk.Treeview(
+        review_frame, columns=("file", "status"), show="headings"
+    )
+    app.review_table.heading("file", text="File Name")
+    app.review_table.heading("status", text="Status")
+    app.review_table.pack(fill="both", expand=True)
+    app.review_table.tag_configure("review", style="ReviewRow")
+    app.review_table.tag_configure("fail", style="FailRow")
+
+    return review_frame
