@@ -1,6 +1,6 @@
 # gui_components.py
-# Version: 32.2.0
-# Last modified: 2025-07-06
+# Version: 32.3.0
+# Last modified: 2025-07-07
 
 import tkinter as tk
 from tkinter import ttk
@@ -330,7 +330,6 @@ def create_footer(parent, app):
         style="Exit.TButton",
     ).pack(side="right")
 
-
 def create_harvest_tab(parent, app):
     harvest_frame = ttk.Frame(parent, padding=15)
     harvest_frame.pack(fill="both", expand=True)
@@ -405,3 +404,40 @@ def create_review_tab(parent, app):
     app.review_table.tag_configure("fail", style="FailRow")
 
     return review_frame
+
+
+def create_data_harvest_tab(parent, app):
+    """Builds the UI for the Data Harvest tab."""
+    style = ttk.Style(parent)
+    style.configure(
+        "Harvest.TFrame",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+    )
+    style.configure(
+        "Harvest.TLabel",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    style.configure(
+        "Harvest.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+
+    harvest_frame = ttk.Frame(parent, padding=20, style="Harvest.TFrame")
+    harvest_frame.pack(fill="both", expand=True)
+
+    ttk.Label(
+        harvest_frame,
+        text="Data harvesting tools will appear here.",
+        style="Harvest.TLabel",
+    ).pack(pady=10)
+
+    ttk.Button(
+        harvest_frame,
+        text="Start Harvest",
+        style="Harvest.TButton",
+        command=lambda: None,
+    ).pack(pady=5)
+
+    return harvest_frame

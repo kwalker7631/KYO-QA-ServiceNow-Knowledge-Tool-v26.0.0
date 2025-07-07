@@ -228,6 +228,20 @@ class KyoQAToolApp(tk.Tk):
         if self.is_fullscreen:
             self.toggle_fullscreen()
 
+    def pause_processing(self):
+        """Pause the current job."""
+        if not self.pause_event.is_set():
+            self.pause_event.set()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        """Resume a paused job."""
+        if self.pause_event.is_set():
+            self.pause_event.clear()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Resuming...")
+
     def update_ui_for_start(self):
         self.is_processing = True
         self.reviewable_files.clear()
