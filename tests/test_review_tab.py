@@ -51,9 +51,23 @@ def test_load_review_data(monkeypatch, tmp_path):
     app.review_filter = types.SimpleNamespace(get=lambda: "All")
     tree = DummyTree()
     app.review_table = tree
+    app.spinner_label = types.SimpleNamespace(config=lambda **k: None)
+    app.progress_bar = types.SimpleNamespace(start=lambda *a, **k: None, stop=lambda: None)
+    class DummyVar:
+        def __init__(self, v=0):
+            self.value = v
+        def set(self, v):
+            self.value = v
+        def get(self):
+            return self.value
+    app.progress_value = DummyVar()
+    app.progress_percent_var = DummyVar()
+    app.status_current_file = DummyVar("")
 
     kyo_qa_tool_app.KyoQAToolApp.load_review_data(app)
 
     assert len(tree.rows) == 2
     filenames = {row["values"][0] for row in tree.rows}
     assert {"file1.pdf", "file2.pdf"} == filenames
+    assert app.status_current_file.value == "Review loaded 2 items."
+    assert not app.spinner_running
