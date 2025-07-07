@@ -19,12 +19,14 @@ sys.modules.setdefault("pytesseract", pytesseract_mod)
 import kyo_qa_tool_app  # noqa: E402
 
 if not hasattr(kyo_qa_tool_app, "KyoQAToolApp"):
+
     class KyoQAToolApp:
         pass
 
     kyo_qa_tool_app.KyoQAToolApp = KyoQAToolApp
 
 if not hasattr(kyo_qa_tool_app.KyoQAToolApp, "_collect_review_pdfs"):
+
     def _collect_review_pdfs(self):
         pdfs = []
         for txt in kyo_qa_tool_app.PDF_TXT_DIR.glob("*.txt"):
@@ -86,3 +88,41 @@ def test_pause_resume_events(monkeypatch):
     assert not app.pause_event.is_set()
     assert app.status_current_file.value == "Resuming..."
 
+
+def test_notebook_tabs(monkeypatch):
+    tabs = []
+
+    class DummyNotebook:
+        def __init__(self, *a, **k):
+            pass
+
+        def pack(self, *a, **k):
+            pass
+
+        def add(self, frame, text=""):
+            tabs.append(text)
+
+    class DummyFrame:
+        def __init__(self, *a, **k):
+            pass
+
+        def pack(self, *a, **k):
+            pass
+
+    monkeypatch.setattr(kyo_qa_tool_app.ttk, "Notebook", DummyNotebook)
+    monkeypatch.setattr(kyo_qa_tool_app.ttk, "Frame", DummyFrame)
+
+    for func in [
+        "create_main_header",
+        "create_io_section",
+        "create_controls_section",
+        "create_live_status_section",
+        "create_footer",
+    ]:
+        monkeypatch.setattr(kyo_qa_tool_app, func, lambda *a, **k: None)
+
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app._create_widgets()
+
+    assert "Main" in tabs
+    assert "Data Harvesting" in tabs
