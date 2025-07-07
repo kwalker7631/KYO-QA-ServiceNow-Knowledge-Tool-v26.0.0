@@ -38,6 +38,17 @@ class DummyTree:
         pass
 
 
+class DummyLabel:
+    def __init__(self):
+        self.visible = False
+
+    def pack(self, *args, **kwargs):
+        self.visible = True
+
+    def pack_forget(self):
+        self.visible = False
+
+
 def test_load_review_data(monkeypatch, tmp_path):
     cache_dir = tmp_path
     data1 = {"filename": "file1.pdf", "status": "Pass"}
