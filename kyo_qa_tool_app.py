@@ -205,7 +205,9 @@ class KyoQAToolApp(tk.Tk):
 
 
     def browse_harvest_file(self):
-        path = filedialog.askopenfilename(title="Select PDF File", filetypes=[("PDF Files", "*.pdf")])
+        path = filedialog.askopenfilename(
+            title="Select PDF File", filetypes=[("PDF Files", "*.pdf")]
+        )
         if path:
             self.harvest_file.set(path)
 
@@ -298,7 +300,9 @@ class KyoQAToolApp(tk.Tk):
     def harvest_single_file(self):
         path_str = self.harvest_file.get()
         if not path_str:
-            messagebox.showwarning("Input Missing", "Please select a PDF file to harvest.")
+            messagebox.showwarning(
+                "Input Missing", "Please select a PDF file to harvest."
+            )
             return
         pdf = Path(path_str)
         if not pdf.exists():
@@ -343,6 +347,49 @@ class KyoQAToolApp(tk.Tk):
             self.status_current_file.set(f"Export failed: {e}")
             self.harvest_export_btn.config(state=tk.DISABLED)
 
+    def manual_export(self):
+        """Export cached JSON results to an Excel file."""
+        excel_path = self.selected_excel.get()
+        if not excel_path:
+            messagebox.showwarning(
+                "Input Missing", "Please select an Excel template file."
+            )
+            return
+
+        cache_files = list(CACHE_DIR.glob("*.json"))
+        if not cache_files:
+            messagebox.showinfo("No Data", "No cached results found.")
+            return
+
+        results = []
+        for jf in cache_files:
+            try:
+                with open(jf, "r", encoding="utf-8") as f:
+                    results.append(json.load(f))
+            except Exception as e:  # pragma: no cover - just log
+                logger.error(f"Failed loading {jf}: {e}")
+
+        try:
+            import processing_engine as pe
+
+            output = pe.export_to_excel(results, Path(excel_path), self.response_queue)
+            if output:
+                messagebox.showinfo(
+                    "Export Complete", f"Results exported to:\n{output}"
+                )
+            else:
+                messagebox.showerror("Export Failed", "Failed to export to Excel.")
+        except Exception as e:  # pragma: no cover - just log
+            logger.error(f"Manual export failed: {e}", exc_info=True)
+            messagebox.showerror("Export Error", str(e))
+
+    def pause_processing(self):
+        self.pause_event.set()
+        self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        self.pause_event.clear()
+        self.status_current_file.set("Resuming...")
 
     def open_review_for_selected_file(self):
         selection = self.review_tree.selection()
