@@ -10,10 +10,9 @@ import threading
 import queue
 import time
 import sys
-import os
 import json
 
-from processing_engine import process_job
+import processing_engine  # noqa: F401 - used for monkeypatching in tests
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -33,7 +32,6 @@ from gui_components import (
     create_footer,
     create_review_tab,
 )
-from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
@@ -133,10 +131,12 @@ class KyoQAToolApp(tk.Tk):
             )
             return
 
+        import processing_engine as pe
+
         job = {"excel_path": excel_path, "input_path": input_path}
         self.update_ui_for_start()
         threading.Thread(
-            target=process_job,
+            target=pe.process_job,
             args=(
                 job,
                 {
@@ -194,6 +194,18 @@ class KyoQAToolApp(tk.Tk):
         )
         if path:
             self.selected_excel.set(path)
+
+    def pause_processing(self):
+        """Pause the ongoing processing thread."""
+        if hasattr(self, "pause_event"):
+            self.pause_event.set()
+        self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        """Resume a paused processing thread."""
+        if hasattr(self, "pause_event"):
+            self.pause_event.clear()
+        self.status_current_file.set("Resuming...")
 
     def on_closing(self):
         if self.is_processing and not messagebox.askyesno(
@@ -256,8 +268,10 @@ class KyoQAToolApp(tk.Tk):
     def _spinner_worker(self):
         frames = "|/-\\"
         idx = 0
-        while self.spinner_running and not self.cancel_event.is_set():
-            if self.pause_event.is_set():
+        cancel_evt = self.__dict__.get("cancel_event", threading.Event())
+        pause_evt = self.__dict__.get("pause_event", threading.Event())
+        while self.spinner_running and not cancel_evt.is_set():
+            if pause_evt.is_set():
                 time.sleep(0.2)
                 continue
             if hasattr(self, "spinner_label"):
@@ -283,7 +297,20 @@ class KyoQAToolApp(tk.Tk):
         )
         if hasattr(self, "review_table"):
             self.review_table.delete(*self.review_table.get_children())
-        for json_file in CACHE_DIR.glob("*.json"):
+
+        json_files = list(CACHE_DIR.glob("*.json"))
+        total = len(json_files)
+        loaded = 0
+
+        self.spinner_running = True
+        threading.Thread(target=self._spinner_worker, daemon=True).start()
+        if hasattr(self, "progress_bar"):
+            self.progress_bar.start(10)
+        self.status_current_file.set("Loading review data...")
+        self.progress_value.set(0)
+        self.progress_percent_var.set("0%")
+
+        for json_file in json_files:
             try:
                 with open(json_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -301,6 +328,67 @@ class KyoQAToolApp(tk.Tk):
                     self.review_table.item(iid, tags=("review",))
                 elif status == "Fail":
                     self.review_table.item(iid, tags=("fail",))
+            loaded += 1
+            if total:
+                val = loaded / total * 100
+                self.progress_value.set(val)
+                self.progress_percent_var.set(f"{int(val)}%")
+            self.status_current_file.set(f"Review loaded {loaded} item(s)...")
+            if vars(self).get("tk"):
+                self.update_idletasks()
+
+        self.status_current_file.set(f"Review loaded {loaded} items.")
+        self.spinner_running = False
+        if hasattr(self, "spinner_label"):
+            self.spinner_label.config(text="")
+        if hasattr(self, "progress_bar"):
+            self.progress_bar.stop()
+        self.progress_value.set(0)
+        self.progress_percent_var.set("0%")
+
+    def manual_export(self):
+        """Export cached results to an Excel file using the existing spinner and progress bar."""
+        excel_path = filedialog.askopenfilename(
+            title="Select Excel Template",
+            filetypes=[("Excel Files", "*.xlsx *.xlsm")],
+        )
+        if not excel_path:
+            return
+
+        results = []
+        for json_file in CACHE_DIR.glob("*.json"):
+            try:
+                with open(json_file, "r", encoding="utf-8") as f:
+                    results.append(json.load(f))
+            except Exception as e:
+                logger.error(f"Failed loading {json_file}: {e}")
+
+        self.spinner_running = True
+        threading.Thread(target=self._spinner_worker, daemon=True).start()
+        if hasattr(self, "progress_bar"):
+            self.progress_bar.start(10)
+        self.status_current_file.set("Exporting to Excel...")
+        self.progress_value.set(0)
+        self.progress_percent_var.set("0%")
+
+        import processing_engine as pe
+
+        output_path = pe.export_to_excel(
+            results, Path(excel_path), queue.Queue()
+        )
+
+        self.spinner_running = False
+        if hasattr(self, "spinner_label"):
+            self.spinner_label.config(text="")
+        if hasattr(self, "progress_bar"):
+            self.progress_bar.stop()
+        self.progress_value.set(0)
+        self.progress_percent_var.set("0%")
+        if output_path:
+            self.status_current_file.set(f"Export complete: {output_path.name}")
+            open_file_in_default_app(output_path)
+        else:
+            self.status_current_file.set("Export failed.")
 
     def process_response_queue(self):
         try:
