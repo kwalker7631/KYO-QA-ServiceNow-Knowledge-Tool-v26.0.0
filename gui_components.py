@@ -84,6 +84,11 @@ def setup_high_contrast_styles(app):
         foreground=[("active", KyoceraColors.HIGH_CONTRAST_TEXT)],
     )
     style.configure(
+        "Exit.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    style.configure(
         "Treeview",
         rowheight=28,
         fieldbackground=KyoceraColors.WIDGET_BG,
