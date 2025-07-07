@@ -283,6 +283,7 @@ class KyoQAToolApp(tk.Tk):
         )
         if hasattr(self, "review_table"):
             self.review_table.delete(*self.review_table.get_children())
+        inserted = 0
         for json_file in CACHE_DIR.glob("*.json"):
             try:
                 with open(json_file, "r", encoding="utf-8") as f:
@@ -297,10 +298,16 @@ class KyoQAToolApp(tk.Tk):
                 iid = self.review_table.insert(
                     "", "end", values=(data.get("filename"), status)
                 )
+                inserted += 1
                 if status == "Needs Review":
                     self.review_table.item(iid, tags=("review",))
                 elif status == "Fail":
                     self.review_table.item(iid, tags=("fail",))
+        if "empty_label" in self.__dict__:
+            if inserted == 0:
+                self.empty_label.pack(pady=10)
+            else:
+                self.empty_label.pack_forget()
 
     def process_response_queue(self):
         try:

@@ -38,6 +38,17 @@ class DummyTree:
         pass
 
 
+class DummyLabel:
+    def __init__(self):
+        self.visible = False
+
+    def pack(self, *args, **kwargs):
+        self.visible = True
+
+    def pack_forget(self):
+        self.visible = False
+
+
 def test_load_review_data(monkeypatch, tmp_path):
     cache_dir = tmp_path
     data1 = {"filename": "file1.pdf", "status": "Pass"}
@@ -57,3 +68,21 @@ def test_load_review_data(monkeypatch, tmp_path):
     assert len(tree.rows) == 2
     filenames = {row["values"][0] for row in tree.rows}
     assert {"file1.pdf", "file2.pdf"} == filenames
+
+
+def test_load_review_data_empty(monkeypatch, tmp_path):
+    cache_dir = tmp_path
+
+    monkeypatch.setattr(kyo_qa_tool_app, "CACHE_DIR", cache_dir, raising=False)
+
+    app = kyo_qa_tool_app.KyoQAToolApp.__new__(kyo_qa_tool_app.KyoQAToolApp)
+    app.review_filter = types.SimpleNamespace(get=lambda: "All")
+    tree = DummyTree()
+    label = DummyLabel()
+    app.review_table = tree
+    app.empty_label = label
+
+    kyo_qa_tool_app.KyoQAToolApp.load_review_data(app)
+
+    assert len(tree.rows) == 0
+    assert label.visible

@@ -113,6 +113,12 @@ def setup_high_contrast_styles(app):
     style.configure(
         "FailRow", background=KyoceraColors.STATUS_ERROR, foreground="white"
     )
+    style.configure(
+        "EmptyState.TLabel",
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        font=("Segoe UI", 12, "bold"),
+    )
 
 
 def create_main_header(parent, version):
@@ -313,6 +319,7 @@ def create_footer(parent, app):
         style="Footer.TButton",
     ).pack(side="right")
 
+
 def create_review_tab(parent, app):
     review_frame = ttk.Frame(parent, padding=15)
     review_frame.pack(fill="both", expand=True)
@@ -344,5 +351,13 @@ def create_review_tab(parent, app):
     app.review_table.pack(fill="both", expand=True)
     app.review_table.tag_configure("review", style="ReviewRow")
     app.review_table.tag_configure("fail", style="FailRow")
+
+    app.empty_label = ttk.Label(
+        review_frame,
+        text="No items to display",
+        style="EmptyState.TLabel",
+    )
+    app.empty_label.pack(pady=10)
+    app.empty_label.pack_forget()
 
     return review_frame
