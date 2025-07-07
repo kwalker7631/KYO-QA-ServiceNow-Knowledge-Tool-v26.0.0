@@ -72,6 +72,11 @@ def setup_high_contrast_styles(app):
         bordercolor=[("!active", KyoceraColors.BACKGROUND_MAIN)],
     )
     style.configure(
+        "Exit.TButton",
+        background=KyoceraColors.HIGH_CONTRAST_BG,
+        foreground=KyoceraColors.HIGH_CONTRAST_TEXT,
+    )
+    style.configure(
         "Treeview",
         rowheight=28,
         fieldbackground=KyoceraColors.WIDGET_BG,
@@ -310,8 +315,9 @@ def create_footer(parent, app):
         footer_frame,
         text="Exit Application",
         command=app.on_closing,
-        style="Footer.TButton",
+        style="Exit.TButton",
     ).pack(side="right")
+
 
 def create_review_tab(parent, app):
     review_frame = ttk.Frame(parent, padding=15)
