@@ -323,6 +323,7 @@ class KyoQAToolApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Export Error", str(e))
             self.status_current_file.set(f"Export failed: {e}")
+            self.harvest_export_btn.config(state=tk.DISABLED)
 
     def pause_processing(self):
         self.pause_event.set()
