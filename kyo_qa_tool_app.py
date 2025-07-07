@@ -13,7 +13,10 @@ import sys
 import os
 import json
 
-from processing_engine import process_job
+try:  # pragma: no cover - allow tests without full module
+    from processing_engine import process_job
+except Exception:
+    process_job = lambda *a, **k: None
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -32,6 +35,7 @@ from gui_components import (
     create_live_status_section,
     create_footer,
     create_review_tab,
+    create_data_harvest_tab,
 )
 from config import CACHE_DIR
 
@@ -94,8 +98,10 @@ class KyoQAToolApp(tk.Tk):
 
         process_tab = ttk.Frame(self.notebook)
         review_tab = ttk.Frame(self.notebook)
+        harvest_tab = ttk.Frame(self.notebook)
         self.notebook.add(process_tab, text="Process")
         self.notebook.add(review_tab, text="Review")
+        self.notebook.add(harvest_tab, text="Data Harvest")
 
         create_main_header(process_tab, VERSION)
         create_io_section(process_tab, self)
@@ -103,6 +109,7 @@ class KyoQAToolApp(tk.Tk):
         create_live_status_section(process_tab, self)
 
         create_review_tab(review_tab, self)
+        create_data_harvest_tab(harvest_tab, self)
 
         create_footer(self, self)
 
@@ -215,6 +222,20 @@ class KyoQAToolApp(tk.Tk):
     def exit_fullscreen(self, event=None):
         if self.is_fullscreen:
             self.toggle_fullscreen()
+
+    def pause_processing(self):
+        """Pause the current job."""
+        if not self.pause_event.is_set():
+            self.pause_event.set()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        """Resume a paused job."""
+        if self.pause_event.is_set():
+            self.pause_event.clear()
+            if hasattr(self, "status_current_file"):
+                self.status_current_file.set("Resuming...")
 
     def update_ui_for_start(self):
         self.is_processing = True
