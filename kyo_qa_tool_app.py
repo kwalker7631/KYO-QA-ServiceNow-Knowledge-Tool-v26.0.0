@@ -37,7 +37,6 @@ from gui_components import (
     create_review_tab,
     create_harvest_tab,
 )
-from config import CACHE_DIR
 
 logger = logging_utils.setup_logger("app")
 
@@ -140,10 +139,12 @@ class KyoQAToolApp(tk.Tk):
             )
             return
 
+        import processing_engine as pe
+
         job = {"excel_path": excel_path, "input_path": input_path}
         self.update_ui_for_start()
         threading.Thread(
-            target=process_job,
+            target=pe.process_job,
             args=(
                 job,
                 {
@@ -201,6 +202,18 @@ class KyoQAToolApp(tk.Tk):
         )
         if path:
             self.selected_excel.set(path)
+
+    def pause_processing(self):
+        """Pause the ongoing processing thread."""
+        if hasattr(self, "pause_event"):
+            self.pause_event.set()
+        self.status_current_file.set("Processing paused")
+
+    def resume_processing(self):
+        """Resume a paused processing thread."""
+        if hasattr(self, "pause_event"):
+            self.pause_event.clear()
+        self.status_current_file.set("Resuming...")
 
     def browse_harvest_file(self):
         path = filedialog.askopenfilename(title="Select PDF File", filetypes=[("PDF Files", "*.pdf")])
@@ -282,8 +295,10 @@ class KyoQAToolApp(tk.Tk):
     def _spinner_worker(self):
         frames = "|/-\\"
         idx = 0
-        while self.spinner_running and not self.cancel_event.is_set():
-            if self.pause_event.is_set():
+        cancel_evt = self.__dict__.get("cancel_event", threading.Event())
+        pause_evt = self.__dict__.get("pause_event", threading.Event())
+        while self.spinner_running and not cancel_evt.is_set():
+            if pause_evt.is_set():
                 time.sleep(0.2)
                 continue
             if hasattr(self, "spinner_label"):
