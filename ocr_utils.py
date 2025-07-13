@@ -4,6 +4,7 @@
 
 import fitz  # PyMuPDF
 import os
+import shutil
 from pathlib import Path
 import logging
 from logging_config import configure_logging
