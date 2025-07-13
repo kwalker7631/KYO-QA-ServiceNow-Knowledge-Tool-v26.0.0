@@ -110,6 +110,7 @@ def test_export_to_excel(tmp_path):
         {
             "filename": "123.pdf",
             "models": "Model1",
+            "qa_numbers": "QA-001",
             "author": "John Doe",
             "status": "Pass",
         }
@@ -123,7 +124,7 @@ def test_export_to_excel(tmp_path):
 
     out_wb = openpyxl.load_workbook(output_path)
     out_sheet = out_wb.active
-    assert out_sheet.cell(row=2, column=2).value == "Model1"
+    assert out_sheet.cell(row=2, column=2).value == "Model1; QA-001"
     assert out_sheet.cell(row=2, column=3).value == "John Doe"
 
 def test_export_to_excel_multiple_rows(tmp_path):
@@ -151,10 +152,8 @@ def test_export_to_excel_multiple_rows(tmp_path):
     ]
 
     output_path = export_to_excel(results, template_path, queue.Queue())
-
     out_wb = openpyxl.load_workbook(output_path)
     out_sheet = out_wb.active
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=3, column=2).value == "Model2"
-    
-    
+  

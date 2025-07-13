@@ -53,8 +53,7 @@ def harvest_models(text: str, filename: str) -> list:
         return []
 
     model_patterns = get_combined_patterns("MODEL_PATTERNS", DEFAULT_MODEL_PATTERNS)
-    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
-    all_search_patterns = model_patterns + qa_patterns
+    all_search_patterns = model_patterns
 
     found = set()
     for pattern in all_search_patterns:
@@ -75,6 +74,26 @@ def harvest_models(text: str, filename: str) -> list:
         standardized_found.add(item)
 
     return sorted(list(standardized_found))
+
+
+def harvest_qa_numbers(text: str) -> list:
+    """Extracts QA and SB numbers using combined default and custom patterns."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(f"Invalid regex pattern skipped: '{pattern}'. Error: {e}")
+
+    return sorted(found)
 
 
 def harvest_author(text: str) -> str:
@@ -99,7 +118,6 @@ def harvest_author(text: str) -> str:
             logger.error(f"Error extracting author with pattern {pattern}: {e}")
 
     return ""
-
 
 def harvest_qa_numbers(text: str) -> list:
     """Extracts QA numbers using only QA_NUMBER_PATTERNS."""
@@ -148,15 +166,15 @@ def harvest_qa_numbers(text: str) -> list:
 
     return sorted(found)
 
-
 def harvest_all_data(text: str, filename: str) -> dict:
     """The main harvester function that aggregates all data."""
     if not text and not filename:
         logger.warning("No text or filename provided for data harvesting")
-        return {"models": "Not Found", "author": ""}
+        return {"models": "Not Found", "qa_numbers": "", "author": ""}
 
     try:
         models = harvest_models(text, filename)
+        qa_nums = harvest_qa_numbers(text)
         models_str = ", ".join(models) if models else "Not Found"
         qa_numbers = harvest_qa_numbers(text)
         qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else ""

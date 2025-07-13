@@ -252,8 +252,14 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
 
     return result
 
-
-def export_to_excel(results, excel_path, progress_queue) -> Path | None:
+def export_to_excel(
+    results,
+    excel_path,
+    progress_queue,
+    *,
+    append_qa_to_meta: bool = True,
+    qa_column_name: str | None = None,
+) -> Path | None:
     """Updates the provided Excel template and returns the path to the new file."""
 
     try:
@@ -276,10 +282,12 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
         ]
         possible_meta_cols = [META_COLUMN_NAME, "meta", "keywords"]
         possible_author_cols = [AUTHOR_COLUMN_NAME, "author"]
-
         filename_col_idx = find_column_index(header, possible_filename_cols)
         meta_col_idx = find_column_index(header, possible_meta_cols)
         author_col_idx = find_column_index(header, possible_author_cols)
+        qa_col_idx = (
+            find_column_index(header, possible_qa_cols) if qa_column_name else None
+        )
 
         if not filename_col_idx:
             raise ValueError(
@@ -332,6 +340,7 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
                 "msg": f"Successfully saved updated Excel file to: {output_path}",
             }
         )
+
         if skipped_files:
             progress_queue.put(
                 {
