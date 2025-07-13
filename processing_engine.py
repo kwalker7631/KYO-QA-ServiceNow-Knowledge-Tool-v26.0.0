@@ -8,7 +8,6 @@ from pathlib import Path
 import queue
 import threading
 import logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 from data_harvesters import harvest_all_data
 from ocr_utils import extract_text_from_pdf, _is_ocr_needed
 from file_utils import is_file_locked
