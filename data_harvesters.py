@@ -3,7 +3,7 @@ import re
 import importlib
 import logging
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+# Logging configuration should be done in the main entry point of the application.
 logger = logging.getLogger("harvesters")
 
 # --- Default Patterns (Single Source of Truth) ---
