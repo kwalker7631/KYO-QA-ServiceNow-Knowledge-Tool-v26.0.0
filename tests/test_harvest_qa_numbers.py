@@ -11,4 +11,6 @@ def test_harvest_qa_numbers_simple():
     qa = dh.harvest_qa_numbers(text)
     assert "QA123" in qa and "SB-456" in qa
     data = dh.harvest_all_data(text, "sample.pdf")
-    assert "QA123" in data.get("qa_numbers", "")
+    expected_qa_numbers = ["QA123", "SB-456"]
+    actual_qa_numbers = data.get("qa_numbers", "").split(", ")
+    assert actual_qa_numbers == expected_qa_numbers
