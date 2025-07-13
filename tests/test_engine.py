@@ -1,6 +1,8 @@
 import queue
 from pathlib import Path
-import openpyxl
+import pytest
+
+openpyxl = pytest.importorskip("openpyxl")
 
 from processing_engine import export_to_excel
 
