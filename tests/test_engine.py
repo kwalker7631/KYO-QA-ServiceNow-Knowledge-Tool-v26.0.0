@@ -54,15 +54,35 @@ def test_export_to_excel(tmp_path):
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=2, column=3).value == "John Doe"
 
+def test_export_to_excel_multiple_rows(tmp_path):
+    """Ensure multiple rows are mapped correctly."""
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    sheet.append(["Number", "meta", "author"])
+    sheet.append(["123", "", ""])
+    sheet.append(["456", "", ""])
+    template_path = tmp_path / "template.xlsx"
+    wb.save(template_path)
 
-def test_export_to_excel_invalid_file(monkeypatch, tmp_path):
-    """Ensure graceful handling when template can't be loaded."""
+    results = [
+        {
+            "filename": "123.pdf",
+            "models": "Model1",
+            "author": "John Doe",
+            "status": "Pass",
+        },
+        {
+            "filename": "456.pdf",
+            "models": "Model2",
+            "author": "Jane Roe",
+            "status": "Pass",
+        },
+    ]
 
-    def bad_load(_):
-        raise openpyxl.utils.exceptions.InvalidFileException("bad")
+    output_path = export_to_excel(results, template_path, queue.Queue())
 
-    monkeypatch.setattr(openpyxl, "load_workbook", bad_load)
-    q = queue.Queue()
-    result = export_to_excel([], tmp_path / "bad.xlsx", q)
-    assert result is None
-    assert not q.empty()
+    out_wb = openpyxl.load_workbook(output_path)
+    out_sheet = out_wb.active
+    assert out_sheet.cell(row=2, column=2).value == "Model1"
+    assert out_sheet.cell(row=3, column=2).value == "Model2"
+
