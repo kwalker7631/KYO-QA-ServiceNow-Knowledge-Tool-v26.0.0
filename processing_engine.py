@@ -272,7 +272,7 @@ def export_to_excel(
     try:
         try:
             import openpyxl
-        except Exception as exc:  # pragma: no cover - environment issue
+        except ImportError as exc:  # pragma: no cover - environment issue
             raise ImportError("openpyxl is required for Excel export") from exc
 
         skipped_files = []
