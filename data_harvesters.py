@@ -1,9 +1,7 @@
 # data_harvesters.py
 import re
 import importlib
-import logging
 from logging_config import configure_logging
-from pathlib import Path
 
 # Configure logging
 logger = configure_logging("harvesters")
@@ -121,6 +119,52 @@ def harvest_author(text: str) -> str:
 
     return ""
 
+def harvest_qa_numbers(text: str) -> list:
+    """Extracts QA numbers using only QA_NUMBER_PATTERNS."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(
+                f"Invalid regex pattern skipped: '{pattern}'. Error: {e}"
+            )
+
+    standardized_found = set()
+    for item in found:
+        for key, value in STANDARDIZATION_RULES.items():
+            item = item.replace(key, value)
+        standardized_found.add(item)
+
+    return sorted(list(standardized_found))
+
+
+def harvest_qa_numbers(text: str) -> list:
+    """Extracts QA or SB numbers from the provided text."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(f"Invalid regex pattern skipped: '{pattern}'. Error: {e}")
+
+    return sorted(found)
 
 def harvest_all_data(text: str, filename: str) -> dict:
     """The main harvester function that aggregates all data."""
@@ -132,10 +176,15 @@ def harvest_all_data(text: str, filename: str) -> dict:
         models = harvest_models(text, filename)
         qa_nums = harvest_qa_numbers(text)
         models_str = ", ".join(models) if models else "Not Found"
-        qa_str = ", ".join(qa_nums)
+        qa_numbers = harvest_qa_numbers(text)
+        qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else ""
         author_str = harvest_author(text)
 
-        return {"models": models_str, "qa_numbers": qa_str, "author": author_str}
+        return {
+            "models": models_str,
+            "qa_numbers": qa_numbers_str,
+            "author": author_str,
+        }
     except Exception as e:
         logger.error(
             f"Critical error during data harvesting for {filename}: {e}", exc_info=True

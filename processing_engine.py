@@ -131,6 +131,7 @@ def process_job(job, events):
                 {"type": "progress", "value": ((i + 1) / total_files) * 100}
             )
 
+        skipped_files = []
         if not cancel_event.is_set() and all_results:
             progress_queue.put(
                 {"type": "status", "msg": "Exporting results to Excel..."}
@@ -251,7 +252,6 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
 
     return result
 
-
 def export_to_excel(
     results,
     excel_path,
@@ -261,8 +261,14 @@ def export_to_excel(
     qa_column_name: str | None = None,
 ) -> Path | None:
     """Updates the provided Excel template and returns the path to the new file."""
+
     try:
-        workbook = openpyxl.load_workbook(excel_path)
+        try:
+            workbook = openpyxl.load_workbook(excel_path)
+        except openpyxl.utils.exceptions.InvalidFileException as exc:
+            msg = f"Failed to read Excel template: {exc}"
+            progress_queue.put({"type": "log", "tag": "error", "msg": msg})
+            return None
         sheet = workbook.active
         header = [cell.value for cell in sheet[1]]
 
@@ -276,8 +282,6 @@ def export_to_excel(
         ]
         possible_meta_cols = [META_COLUMN_NAME, "meta", "keywords"]
         possible_author_cols = [AUTHOR_COLUMN_NAME, "author"]
-        possible_qa_cols = [qa_column_name] if qa_column_name else []
-
         filename_col_idx = find_column_index(header, possible_filename_cols)
         meta_col_idx = find_column_index(header, possible_meta_cols)
         author_col_idx = find_column_index(header, possible_author_cols)
@@ -297,9 +301,6 @@ def export_to_excel(
             raise ValueError(
                 f"Could not find the author column. Looked for: {possible_author_cols}"
             )
-        if qa_column_name and not qa_col_idx:
-            qa_col_idx = len(header) + 1
-            sheet.cell(row=1, column=qa_col_idx).value = qa_column_name
 
         filename_to_row = {
             cell.value: row
@@ -319,23 +320,10 @@ def export_to_excel(
             row_num = filename_to_row.get(kb_number)
 
             if row_num:
-                meta_cell = sheet.cell(row=row_num, column=meta_col_idx)
-                if not meta_cell.value:
-                    meta_cell.value = result["models"]
-                if append_qa_to_meta and result.get("qa_numbers"):
-                    current = meta_cell.value or ""
-                    sep = "; " if current else ""
-                    meta_cell.value = f"{current}{sep}{result['qa_numbers']}"
-
-                if (
-                    qa_col_idx
-                    and result.get("qa_numbers")
-                    and not sheet.cell(row=row_num, column=qa_col_idx).value
-                ):
-                    sheet.cell(row=row_num, column=qa_col_idx).value = result[
-                        "qa_numbers"
+                if not sheet.cell(row=row_num, column=meta_col_idx).value:
+                    sheet.cell(row=row_num, column=meta_col_idx).value = result[
+                        "models"
                     ]
-
                 if not sheet.cell(row=row_num, column=author_col_idx).value:
                     sheet.cell(row=row_num, column=author_col_idx).value = result.get(
                         "author", ""
@@ -352,7 +340,16 @@ def export_to_excel(
                 "msg": f"Successfully saved updated Excel file to: {output_path}",
             }
         )
-        return output_path
+
+        if skipped_files:
+            progress_queue.put(
+                {
+                    "type": "log",
+                    "tag": "warning",
+                    "msg": f"Skipped {len(skipped_files)} file(s) not found in template: {', '.join(skipped_files)}",
+                }
+            )
+        return output_path, skipped_files
 
     except Exception as e:
         logger.error(f"Failed to export results to Excel: {e}", exc_info=True)
