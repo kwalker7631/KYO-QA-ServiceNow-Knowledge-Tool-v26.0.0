@@ -185,4 +185,4 @@ def test_export_to_excel_multiple_rows(tmp_path):
     out_sheet = out_wb.active
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=3, column=2).value == "Model2"
-  
+ 
