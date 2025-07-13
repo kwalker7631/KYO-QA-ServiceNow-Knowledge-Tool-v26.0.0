@@ -131,6 +131,7 @@ def process_job(job, events):
                 {"type": "progress", "value": ((i + 1) / total_files) * 100}
             )
 
+        skipped_files = []
         if not cancel_event.is_set() and all_results:
             progress_queue.put(
                 {"type": "status", "msg": "Exporting results to Excel..."}
@@ -254,6 +255,7 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
 
 def export_to_excel(results, excel_path, progress_queue) -> Path | None:
     """Updates the provided Excel template and returns the path to the new file."""
+
     try:
         try:
             workbook = openpyxl.load_workbook(excel_path)
@@ -330,7 +332,15 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
                 "msg": f"Successfully saved updated Excel file to: {output_path}",
             }
         )
-        return output_path
+        if skipped_files:
+            progress_queue.put(
+                {
+                    "type": "log",
+                    "tag": "warning",
+                    "msg": f"Skipped {len(skipped_files)} file(s) not found in template: {', '.join(skipped_files)}",
+                }
+            )
+        return output_path, skipped_files
 
     except Exception as e:
         logger.error(f"Failed to export results to Excel: {e}", exc_info=True)

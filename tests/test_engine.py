@@ -44,10 +44,11 @@ def test_export_to_excel(tmp_path):
         }
     ]
 
-    output_path = export_to_excel(results, template_path, queue.Queue())
+    output_path, skipped = export_to_excel(results, template_path, queue.Queue())
 
     assert output_path is not None
     assert Path(output_path).exists()
+    assert skipped == []
 
     out_wb = openpyxl.load_workbook(output_path)
     out_sheet = out_wb.active
@@ -60,7 +61,6 @@ def test_export_to_excel_multiple_rows(tmp_path):
     sheet = wb.active
     sheet.append(["Number", "meta", "author"])
     sheet.append(["123", "", ""])
-    sheet.append(["456", "", ""])
     template_path = tmp_path / "template.xlsx"
     wb.save(template_path)
 
@@ -85,4 +85,3 @@ def test_export_to_excel_multiple_rows(tmp_path):
     out_sheet = out_wb.active
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=3, column=2).value == "Model2"
-
