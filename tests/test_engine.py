@@ -1,5 +1,15 @@
 import queue
 from pathlib import Path
+import sys
+from types import SimpleNamespace
+
+from tests.openpyxl_stub import ensure_openpyxl_stub
+
+ensure_openpyxl_stub()
+sys.modules.setdefault("fitz", SimpleNamespace())
+sys.modules.setdefault("pytesseract", SimpleNamespace())
+sys.modules.setdefault("cv2", SimpleNamespace())
+sys.modules.setdefault("PIL", SimpleNamespace(Image=SimpleNamespace()))
 import openpyxl
 
 from processing_engine import export_to_excel
