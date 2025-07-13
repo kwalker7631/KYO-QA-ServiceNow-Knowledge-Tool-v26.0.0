@@ -112,4 +112,5 @@ spec.loader.exec_module(app_module)
 def test_app_instantiation():
     app_module.KyoQAToolApp._setup_window = lambda self: None
     app_module.KyoQAToolApp._create_widgets = lambda self: None
-    app_module.KyoQAToolApp()
+    app = app_module.KyoQAToolApp()
+    app.destroy()
