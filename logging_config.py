@@ -1,6 +1,12 @@
 import logging
-from logging_utils import setup_logger
+
 
 def configure_logging(name: str = 'app', level: int = logging.INFO) -> logging.Logger:
-    """Configure and return a logger using logging_utils.setup_logger."""
-    return setup_logger(name, level)
+    """Simple logger configuration used during testing."""
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(levelname)s:%(name)s:%(message)s'))
+        logger.addHandler(handler)
+    logger.setLevel(level)
+    return logger
