@@ -2,6 +2,9 @@
 # Version: 31.0.0
 # Last modified: 2025-07-06
 
+import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
+
 
 class KyoceraColors:
     """

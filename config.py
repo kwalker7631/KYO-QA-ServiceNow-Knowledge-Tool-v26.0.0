@@ -5,6 +5,7 @@
 import json
 import os
 import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
 from pathlib import Path
 from version import __version__
 from branding import KyoceraColors

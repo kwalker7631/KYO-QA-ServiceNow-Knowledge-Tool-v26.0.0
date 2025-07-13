@@ -47,7 +47,20 @@ sys.modules.setdefault("tkinter.messagebox", types.ModuleType("tkinter.messagebo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kyo_qa_tool_app import KyoQAToolApp
+import importlib.util
+import types
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location(
+    "pkg.kyo_qa_tool_app", ROOT / "kyo_qa_tool_app.py", submodule_search_locations=[str(ROOT)]
+)
+pkg = types.ModuleType("pkg")
+pkg.__path__ = [str(ROOT)]
+sys.modules.setdefault("pkg", pkg)
+app_module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = app_module
+spec.loader.exec_module(app_module)
+KyoQAToolApp = app_module.KyoQAToolApp
 
 
 class DummyVar:
