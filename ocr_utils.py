@@ -2,14 +2,23 @@
 # Version: 33.0.0
 # Last modified: 2025-07-06
 
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except ImportError:  # pragma: no cover - optional dependency
+    fitz = None
 import os
 import shutil
 from pathlib import Path
 import logging
 from logging_config import configure_logging
-from PIL import Image
-import pytesseract
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover - optional dependency
+    Image = None
+try:
+    import pytesseract
+except ImportError:  # pragma: no cover - optional dependency
+    pytesseract = None
 
 # Configure logger
 logger = configure_logging("ocr_utils")

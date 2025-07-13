@@ -16,21 +16,21 @@ import json
 import logging
 logging.getLogger(__name__).setLevel(logging.DEBUG)
 
-from .processing_engine import process_job
-from .ocr_utils import extract_text_from_pdf
-from .data_harvesters import harvest_all_data
-from .utils import ExcelGenerator
-from .file_utils import (
+from processing_engine import process_job
+from ocr_utils import extract_text_from_pdf
+from data_harvesters import harvest_all_data
+from utils import ExcelGenerator
+from file_utils import (
     ensure_folders,
     cleanup_directory,
     extract_zip_to_temp,
     open_file_in_default_app,
 )
-from .kyo_review_tool import ReviewWindow
-from .version import VERSION
-from . import logging_utils
-from .config import CACHE_DIR
-from .gui_components import (
+from kyo_review_tool import ReviewWindow
+from version import VERSION
+import logging_utils
+from config import CACHE_DIR
+from gui_components import (
     setup_high_contrast_styles,
     create_main_header,
     create_io_section,
