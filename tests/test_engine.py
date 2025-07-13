@@ -1,6 +1,27 @@
 import queue
 from pathlib import Path
+import sys
+from types import SimpleNamespace
+from openpyxl_stub import ensure_openpyxl_stub
+
+ensure_openpyxl_stub()
 import openpyxl
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+dummy = SimpleNamespace()
+for mod in [
+    "fitz",
+    "pytesseract",
+    "cv2",
+    "anthropic",
+    "sentry_sdk",
+    "sentry_sdk.integrations.logging",
+    "extract.common",
+    "custom_recycles",
+]:
+    sys.modules.setdefault(mod, dummy)
+sys.modules.setdefault("PIL", SimpleNamespace(Image=SimpleNamespace()))
 
 from processing_engine import export_to_excel
 
@@ -32,7 +53,6 @@ def test_export_to_excel(tmp_path):
     out_sheet = out_wb.active
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=2, column=3).value == "John Doe"
-
 
 def test_export_to_excel_multiple_rows(tmp_path):
     """Ensure multiple rows are mapped correctly."""
