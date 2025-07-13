@@ -15,7 +15,16 @@ def parse_data(data):
     return data
 
 
-def export_results(parsed, job):
-    """Placeholder export step."""
+def export_results(parsed: Any, job: Any) -> None:
+    """
+    Placeholder export step.
+    
+    Args:
+        parsed (Any): The parsed data to be exported. The structure of this data is not yet defined.
+        job (Any): The job information associated with the export process. The structure of this data is not yet defined.
+    
+    Returns:
+        None: This function does not return any value.
+    """
     logger.info("Exporting results")
     return None
