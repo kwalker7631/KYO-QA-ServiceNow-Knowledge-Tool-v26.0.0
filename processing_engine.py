@@ -89,6 +89,17 @@ def process_job(job, events):
 
             progress_queue.put({"type": "status", "msg": f"Processing {i+1}/{total_files}: {pdf_path.name}"})
             result = process_single_pdf(pdf_path, progress_queue)
+
+            if not result.get("short_description") or not result.get("merge_key"):
+                progress_queue.put({
+                    "type": "log",
+                    "tag": "warning",
+                    "msg": f"Skipping {pdf_path.name}: missing short description or merge key."
+                })
+                progress_queue.put({"type": "update_counts", "status": "Fail"})
+                progress_queue.put({"type": "progress", "value": ((i + 1) / total_files) * 100})
+                continue
+
             all_results.append(result)
             progress_queue.put({"type": "progress", "value": ((i + 1) / total_files) * 100})
 
