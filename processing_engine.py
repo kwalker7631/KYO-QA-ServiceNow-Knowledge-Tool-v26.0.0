@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 import queue
 import threading
-import openpyxl
 import logging
 logging.getLogger(__name__).setLevel(logging.DEBUG)
 
@@ -271,6 +270,11 @@ def export_to_excel(
     """Updates the provided Excel template and returns the path to the new file."""
 
     try:
+        try:
+            import openpyxl
+        except ImportError as exc:  # pragma: no cover - environment issue
+            raise ImportError("openpyxl is required for Excel export") from exc
+
         skipped_files = []
         try:
             workbook = openpyxl.load_workbook(excel_path)
@@ -383,6 +387,8 @@ def export_to_excel(
         return output_path
 
     except Exception as e:
+        if isinstance(e, ImportError):
+            raise
         logger.error(f"Failed to export results to Excel: {e}", exc_info=True)
         progress_queue.put(
             {"type": "log", "tag": "error", "msg": f"Failed to export to Excel: {e}"}

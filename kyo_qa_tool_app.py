@@ -16,7 +16,6 @@ import json
 import logging
 logging.getLogger(__name__).setLevel(logging.DEBUG)
 
-from processing_engine import process_job
 from ocr_utils import extract_text_from_pdf
 from data_harvesters import harvest_all_data
 from utils import ExcelGenerator
