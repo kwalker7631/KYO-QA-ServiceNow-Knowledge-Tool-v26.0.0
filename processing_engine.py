@@ -189,7 +189,14 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
         if not author_col_idx:
             raise ValueError(f"Could not find the author column. Looked for: {possible_author_cols}")
 
-        filename_to_row = {cell.value: row for row, cell in enumerate(sheet.iter_cols(min_col=filename_col_idx, max_col=filename_col_idx, min_row=2), 2)}
+        filename_to_row = {}
+        for row in sheet.iter_rows(
+            min_row=2,
+            min_col=filename_col_idx,
+            max_col=filename_col_idx,
+        ):
+            cell = row[0]
+            filename_to_row[cell.value] = cell.row
 
         for result in results:
             if result['status'] == 'Fail':
@@ -203,6 +210,9 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
                     sheet.cell(row=row_num, column=meta_col_idx).value = result['models']
                 if not sheet.cell(row=row_num, column=author_col_idx).value:
                     sheet.cell(row=row_num, column=author_col_idx).value = result.get('author', '')
+            else:
+                logger.warning(f"Filename not found in Excel: {kb_number}")
+                progress_queue.put({"type": "log", "tag": "warning", "msg": f"No Excel match for {kb_number}"})
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         output_filename = f"{excel_path.stem}_processed_{timestamp}{excel_path.suffix}"
