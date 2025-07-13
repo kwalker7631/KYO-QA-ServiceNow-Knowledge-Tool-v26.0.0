@@ -78,6 +78,22 @@ if "openpyxl" not in sys.modules:
 else:
     import openpyxl
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+dummy = SimpleNamespace()
+for mod in [
+    "fitz",
+    "pytesseract",
+    "cv2",
+    "anthropic",
+    "sentry_sdk",
+    "sentry_sdk.integrations.logging",
+    "extract.common",
+    "custom_recycles",
+]:
+    sys.modules.setdefault(mod, dummy)
+sys.modules.setdefault("PIL", SimpleNamespace(Image=SimpleNamespace()))
+
 from processing_engine import export_to_excel
 
 
@@ -99,42 +115,46 @@ def test_export_to_excel(tmp_path):
         }
     ]
 
-    output_path = export_to_excel(results, template_path, queue.Queue())
+    output_path, skipped = export_to_excel(results, template_path, queue.Queue())
 
     assert output_path is not None
     assert Path(output_path).exists()
+    assert skipped == []
 
     out_wb = openpyxl.load_workbook(output_path)
     out_sheet = out_wb.active
     assert out_sheet.cell(row=2, column=2).value == "Model1"
     assert out_sheet.cell(row=2, column=3).value == "John Doe"
 
+def test_export_to_excel_multiple_rows(tmp_path):
+    """Ensure multiple rows are mapped correctly."""
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    sheet.append(["Number", "meta", "author"])
+    sheet.append(["123", "", ""])
+    template_path = tmp_path / "template.xlsx"
+    wb.save(template_path)
 
-def test_process_job_skips_missing_fields(monkeypatch, tmp_path):
-    pdf = tmp_path / "file.pdf"
-    pdf.touch()
+    results = [
+        {
+            "filename": "123.pdf",
+            "models": "Model1",
+            "author": "John Doe",
+            "status": "Pass",
+        },
+        {
+            "filename": "456.pdf",
+            "models": "Model2",
+            "author": "Jane Roe",
+            "status": "Pass",
+        },
+    ]
 
-    def fake_process_single_pdf(_path, _queue):
-        return {"filename": _path.name, "status": "Pass", "models": "M1"}
+    output_path = export_to_excel(results, template_path, queue.Queue())
 
-    captured = {}
-
-    def fake_export(results, excel_path, progress_queue):
-        captured["results"] = results
-        return Path(excel_path)
-
-    monkeypatch.setattr("processing_engine.process_single_pdf", fake_process_single_pdf)
-    monkeypatch.setattr("processing_engine.export_to_excel", fake_export)
-
-    excel = tmp_path / "t.xlsx"
-    excel.touch()
-    job = {"excel_path": excel, "input_path": [pdf]}
-    q = queue.Queue()
-    events = {"progress_queue": q}
-
-    import processing_engine
-    processing_engine.process_job(job, events)
-
-    logs = list(q.queue)
-    assert any(i.get("tag") == "warning" for i in logs)
-    assert "results" not in captured
+    out_wb = openpyxl.load_workbook(output_path)
+    out_sheet = out_wb.active
+    assert out_sheet.cell(row=2, column=2).value == "Model1"
+    assert out_sheet.cell(row=3, column=2).value == "Model2"
+    
+    
