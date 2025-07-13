@@ -13,7 +13,13 @@ from logging_config import configure_logging
 from data_harvesters import harvest_all_data
 from ocr_utils import extract_text_from_pdf, _is_ocr_needed
 from file_utils import is_file_locked
-from config import CACHE_DIR, PDF_TXT_DIR, META_COLUMN_NAME, AUTHOR_COLUMN_NAME
+from config import (
+    CACHE_DIR,
+    PDF_TXT_DIR,
+    META_COLUMN_NAME,
+    AUTHOR_COLUMN_NAME,
+    QA_NUMBERS_COLUMN_NAME,
+)
 from processing_helpers import fetch_data, parse_data, export_results
 
 logger = configure_logging("processing_engine")
@@ -177,10 +183,12 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
         possible_filename_cols = ['Number', 'number', 'article number', 'kb number', 'kb_number']
         possible_meta_cols = [META_COLUMN_NAME, 'meta', 'keywords']
         possible_author_cols = [AUTHOR_COLUMN_NAME, 'author']
+        possible_qa_cols = [QA_NUMBERS_COLUMN_NAME, 'qa numbers', 'qa_numbers', 'qa']
 
         filename_col_idx = find_column_index(header, possible_filename_cols)
         meta_col_idx = find_column_index(header, possible_meta_cols)
         author_col_idx = find_column_index(header, possible_author_cols)
+        qa_col_idx = find_column_index(header, possible_qa_cols)
 
         if not filename_col_idx:
             raise ValueError(f"Could not find an article number column. Looked for: {possible_filename_cols}")
@@ -188,20 +196,43 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
             raise ValueError(f"Could not find the meta/keywords column. Looked for: {possible_meta_cols}")
         if not author_col_idx:
             raise ValueError(f"Could not find the author column. Looked for: {possible_author_cols}")
+        # QA column is optional; qa_col_idx may be None
 
         filename_to_row = {cell.value: row for row, cell in enumerate(sheet.iter_cols(min_col=filename_col_idx, max_col=filename_col_idx, min_row=2), 2)}
 
         for result in results:
             if result['status'] == 'Fail':
                 continue
-            
+
             kb_number = Path(result['filename']).stem
             row_num = filename_to_row.get(kb_number)
 
             if row_num:
-                if not sheet.cell(row=row_num, column=meta_col_idx).value:
-                    sheet.cell(row=row_num, column=meta_col_idx).value = result['models']
-                if not sheet.cell(row=row_num, column=author_col_idx).value:
+                meta_value = sheet.cell(row=row_num, column=meta_col_idx).value
+                author_value = sheet.cell(row=row_num, column=author_col_idx).value
+
+                if not meta_value:
+                    models_val = result['models']
+                    if result.get('qa_numbers') and qa_col_idx is None:
+                        qa_str = (
+                            ", ".join(result['qa_numbers'])
+                            if isinstance(result['qa_numbers'], list)
+                            else str(result['qa_numbers'])
+                        )
+                        models_val = f"{models_val}, {qa_str}"
+                    sheet.cell(row=row_num, column=meta_col_idx).value = models_val
+
+                if qa_col_idx and result.get('qa_numbers'):
+                    qa_cell_val = sheet.cell(row=row_num, column=qa_col_idx).value
+                    if not qa_cell_val:
+                        qa_str = (
+                            ", ".join(result['qa_numbers'])
+                            if isinstance(result['qa_numbers'], list)
+                            else str(result['qa_numbers'])
+                        )
+                        sheet.cell(row=row_num, column=qa_col_idx).value = qa_str
+
+                if not author_value:
                     sheet.cell(row=row_num, column=author_col_idx).value = result.get('author', '')
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
