@@ -371,11 +371,14 @@ class KyoQAToolApp(tk.Tk):
         try:
             import processing_engine as pe
 
-            output = pe.export_to_excel(results, Path(excel_path), self.response_queue)
+            output, skipped = pe.export_to_excel(
+                results, Path(excel_path), self.response_queue
+            )
             if output:
-                messagebox.showinfo(
-                    "Export Complete", f"Results exported to:\n{output}"
-                )
+                msg = f"Results exported to:\n{output}"
+                if skipped:
+                    msg += f"\nSkipped: {', '.join(skipped)}"
+                messagebox.showinfo("Export Complete", msg)
             else:
                 messagebox.showerror("Export Failed", "Failed to export to Excel.")
         except Exception as e:  # pragma: no cover - just log
