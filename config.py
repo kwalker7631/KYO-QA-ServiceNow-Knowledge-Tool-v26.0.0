@@ -42,6 +42,7 @@ STATUS_COLUMN_NAME = "Validation Status"
 DESCRIPTION_COLUMN_NAME = "description"
 META_COLUMN_NAME = "meta"
 AUTHOR_COLUMN_NAME = "author"
+QA_NUMBERS_COLUMN_NAME = "QA Numbers"
 
 
 # --- Functions for GUI Configuration ---

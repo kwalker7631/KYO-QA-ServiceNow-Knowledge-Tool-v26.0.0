@@ -18,7 +18,6 @@ from processing_helpers import fetch_data, parse_data, export_results
 
 logger = configure_logging("processing_engine")
 
-
 def find_column_index(header, possible_names):
     """Finds the index of a column from a list of possible names (case-insensitive and ignores spaces)."""
     header_lower = [str(h).lower().strip() for h in header]

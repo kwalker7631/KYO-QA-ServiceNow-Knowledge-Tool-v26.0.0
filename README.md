@@ -103,6 +103,8 @@ KYO_QA_ServiceNow_Knowledge_Tool_v26.0.0/\
 - **Modular & Logged**: Comprehensive logging to `/logs/` and `PDF_TXT/needs_review` for review.
 - **UI**: Bright, Kyocera-branded Tkinter UI with progress bars, color-coded logs, and detailed processing feedback.
 - **Excel**: Clones input Excel, updates only blank "Meta" cells with model numbers.
+  If your template includes a "QA Numbers" column, those values are placed there;
+  otherwise they are added to the Meta text.
 
 ## Setup Steps
 
@@ -132,11 +134,14 @@ KYO_QA_ServiceNow_Knowledge_Tool_v26.0.0/\
 ## Usage
 
 1. Launch the tool via `START.bat` or `python run.py`.
-2. Select an Excel file with a "Meta" column (case-insensitive).
+2. Select an Excel file with a "Meta" column (case-insensitive). You may also
+   include an optional **"QA Numbers"** column to keep QA identifiers separate.
 3. Select a folder or PDF files (`.pdf` or `.zip`) containing Kyocera QA/service documents.
 4. Click "Start Processing" to:
    - Extract model numbers (e.g., `PF-740`, `TASKalfa AB-1234abcd`), QA numbers, and metadata.
-   - Update blank "Meta" cells in a cloned Excel file.
+   - Update blank "Meta" cells in a cloned Excel file. If a "QA Numbers" column
+     exists, QA numbers will be written there; otherwise they are appended to the
+     Meta field.
    - Save text files for failed or incomplete extractions in `PDF_TXT/needs_review`.
 5. Review output in `/output/cloned_<excel>.xlsx` and logs in `/logs/` or `PDF_TXT/needs_review`.
 
