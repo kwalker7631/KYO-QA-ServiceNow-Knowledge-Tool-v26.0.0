@@ -19,7 +19,6 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     pytesseract = None
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger("ocr_utils")
 
 # --- Tesseract Initialization ---
