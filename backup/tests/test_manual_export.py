@@ -4,7 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pytest
 import importlib.util
@@ -25,7 +25,7 @@ for mod in [
     sys.modules.setdefault(mod, dummy)
 sys.modules.setdefault("PIL", SimpleNamespace(Image=SimpleNamespace()))
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location(
     "pkg.kyo_qa_tool_app", ROOT / "kyo_qa_tool_app.py", submodule_search_locations=[str(ROOT)]
 )

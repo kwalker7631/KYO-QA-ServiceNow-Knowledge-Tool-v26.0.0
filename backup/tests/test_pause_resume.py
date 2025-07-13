@@ -45,12 +45,12 @@ sys.modules.setdefault("tkinter.ttk", types.ModuleType("tkinter.ttk"))
 sys.modules.setdefault("tkinter.filedialog", types.ModuleType("tkinter.filedialog"))
 sys.modules.setdefault("tkinter.messagebox", types.ModuleType("tkinter.messagebox"))
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import importlib.util
 import types
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location(
     "pkg.kyo_qa_tool_app", ROOT / "kyo_qa_tool_app.py", submodule_search_locations=[str(ROOT)]
 )

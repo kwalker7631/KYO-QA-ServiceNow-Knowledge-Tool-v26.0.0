@@ -135,9 +135,8 @@ def harvest_all_data(text: str, filename: str) -> dict:
 
     try:
         models = harvest_models(text, filename)
-        qa_nums = harvest_qa_numbers(text)
-        models_str = ", ".join(models) if models else "Not Found"
         qa_numbers = harvest_qa_numbers(text)
+        models_str = ", ".join(models) if models else "Not Found"
         qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else ""
         author_str = harvest_author(text)
 

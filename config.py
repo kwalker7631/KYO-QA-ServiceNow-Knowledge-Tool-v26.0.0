@@ -1,17 +1,17 @@
 # config.py
-# Version: 28.0.0
+# Version: __version__
 # Last modified: 2025-07-06
 
 import json
 import os
 import logging
-logging.getLogger(__name__).setLevel(logging.DEBUG)
 from pathlib import Path
-from version import __version__
-from branding import KyoceraColors
 
-# Initialize logging
-logger = logging.getLogger('config')
+from branding import KyoceraColors
+from version import __version__
+
+logger = logging.getLogger("config")
+logger.setLevel(logging.DEBUG)
 
 # --- Directory Constants ---
 BASE_DIR = Path(__file__).parent

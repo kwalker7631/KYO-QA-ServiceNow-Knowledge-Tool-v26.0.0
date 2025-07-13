@@ -1,8 +1,7 @@
 # kyo_review_tool.py
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk
 from pathlib import Path
-import re
 import logging
 import traceback
 

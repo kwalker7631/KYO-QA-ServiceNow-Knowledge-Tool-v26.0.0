@@ -4,7 +4,7 @@ from pathlib import Path
 import queue
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.fixture
 def temporary_sys_path():

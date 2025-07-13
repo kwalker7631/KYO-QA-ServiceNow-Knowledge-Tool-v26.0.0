@@ -8,7 +8,6 @@ except ImportError:  # pragma: no cover - optional dependency
     fitz = None
 import os
 import shutil
-from pathlib import Path
 import logging
 try:
     from PIL import Image
