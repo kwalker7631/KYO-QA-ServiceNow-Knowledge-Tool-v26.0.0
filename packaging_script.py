@@ -19,7 +19,6 @@ out_zip = output_dir / f"KYO_QA_Knowledge_Tool_{current_version}_{ts}.zip"
 # Files and folders to include
 include = [
     "run.py",
-    "cli_runner.py",
     "kyo_qa_tool_app.py",
     "excel_generator.py",
     "processing_engine.py",
@@ -38,9 +37,10 @@ include = [
     "tests",
 ]
 
+
 # Zip it up
 def zip_project():
-    with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
         for entry in include:
             path = project_root / entry
             if path.is_dir():
@@ -53,5 +53,6 @@ def zip_project():
 
     print(f"\n✅ Packaged to {out_zip}\n")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     zip_project()

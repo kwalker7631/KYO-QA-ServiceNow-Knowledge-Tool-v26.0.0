@@ -14,6 +14,7 @@ This tool extracts model numbers (e.g., `PF-740`, `TASKalfa AB-1234abcd`, `ECOSY
 - **Memory Optimization**: Better memory management for processing large batches of files
 - **Bug Fixes**: Resolved critical issues with pattern processing and UI components
 - **Sentry Error Reporting**: Optional cloud-based error logging when `SENTRY_DSN` is set
+- **CLI Deprecated**: The old `cli_runner.py` command-line helper has been removed. Use the GUI or `run.py` instead.
 
 ## How to Set Up and Run
 
