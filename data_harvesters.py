@@ -102,6 +102,34 @@ def harvest_author(text: str) -> str:
 
 
 def harvest_qa_numbers(text: str) -> list:
+    """Extracts QA numbers using only QA_NUMBER_PATTERNS."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(
+                f"Invalid regex pattern skipped: '{pattern}'. Error: {e}"
+            )
+
+    standardized_found = set()
+    for item in found:
+        for key, value in STANDARDIZATION_RULES.items():
+            item = item.replace(key, value)
+        standardized_found.add(item)
+
+    return sorted(list(standardized_found))
+
+
+def harvest_qa_numbers(text: str) -> list:
     """Extracts QA or SB numbers from the provided text."""
     if not text:
         return []
@@ -130,9 +158,9 @@ def harvest_all_data(text: str, filename: str) -> dict:
     try:
         models = harvest_models(text, filename)
         models_str = ", ".join(models) if models else "Not Found"
-        author_str = harvest_author(text)
         qa_numbers = harvest_qa_numbers(text)
-        qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else "Not Found"
+        qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else ""
+        author_str = harvest_author(text)
 
         return {
             "models": models_str,

@@ -1,78 +1,80 @@
 import sys
+import json
 from types import SimpleNamespace
-
-_SAVED_WORKBOOKS = {}
 
 
 class Cell:
-    def __init__(self, sheet, row, column):
-        self._sheet = sheet
-        self._row = row
-        self._col = column
+    def __init__(self, worksheet, row, column):
+        self._ws = worksheet
+        self._row = row - 1
+        self._col = column - 1
 
     @property
     def value(self):
-        r = self._row - 1
-        c = self._col - 1
-        if r < len(self._sheet._rows) and c < len(self._sheet._rows[r]):
-            return self._sheet._rows[r][c]
-        return None
+        try:
+            return self._ws._rows[self._row][self._col]
+        except IndexError:
+            return None
 
     @value.setter
     def value(self, val):
-        r = self._row - 1
-        c = self._col - 1
-        while len(self._sheet._rows) <= r:
-            self._sheet._rows.append([])
-        row = self._sheet._rows[r]
-        while len(row) <= c:
-            row.append(None)
-        row[c] = val
+        while len(self._ws._rows) <= self._row:
+            self._ws._rows.append([])
+        while len(self._ws._rows[self._row]) <= self._col:
+            self._ws._rows[self._row].append(None)
+        self._ws._rows[self._row][self._col] = val
 
 
-class DummySheet:
-    def __init__(self):
-        self._rows = []
+class Worksheet:
+    def __init__(self, rows=None):
+        self._rows = rows or []
 
     def append(self, row):
         self._rows.append(list(row))
 
+    def __getitem__(self, idx):
+        row = self._rows[idx - 1]
+        return [SimpleNamespace(value=v) for v in row]
+
+    def iter_cols(self, min_col, max_col, min_row=1):
+        for r in range(min_row - 1, len(self._rows)):
+            for col in range(min_col - 1, max_col):
+                yield SimpleNamespace(
+                    value=(self._rows[r][col] if col < len(self._rows[r]) else None)
+                )
+
     def cell(self, row, column):
         return Cell(self, row, column)
 
-    def __getitem__(self, index):
-        idx = index - 1
-        if idx >= len(self._rows):
-            return []
-        return [SimpleNamespace(value=v) for v in self._rows[idx]]
 
-    def iter_cols(self, min_col=None, max_col=None, min_row=1):
-        max_row = len(self._rows)
-        for row in range(min_row, max_row + 1):
-            val = None
-            if row - 1 < len(self._rows) and min_col - 1 < len(self._rows[row - 1]):
-                val = self._rows[row - 1][min_col - 1]
-            yield SimpleNamespace(value=val)
-
-
-class DummyWorkbook:
-    def __init__(self):
-        self.active = DummySheet()
+class Workbook:
+    def __init__(self, rows=None):
+        self.active = Worksheet(rows)
 
     def save(self, path):
-        _SAVED_WORKBOOKS[str(path)] = [row[:] for row in self.active._rows]
         with open(path, "w", encoding="utf-8") as f:
-            f.write("dummy")
+            json.dump(self.active._rows, f)
 
 
 def load_workbook(path):
-    wb = DummyWorkbook()
-    wb.active._rows = [row[:] for row in _SAVED_WORKBOOKS.get(str(path), [])]
-    return wb
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            rows = json.load(f)
+    except Exception:
+        raise InvalidFileException(f"Cannot read {path}")
+    return Workbook(rows)
+
+
+class InvalidFileException(Exception):
+    pass
 
 
 def ensure_openpyxl_stub():
-    if "openpyxl" not in sys.modules:
-        sys.modules["openpyxl"] = SimpleNamespace(
-            Workbook=DummyWorkbook, load_workbook=load_workbook
-        )
+    module = SimpleNamespace(
+        Workbook=Workbook,
+        load_workbook=load_workbook,
+        utils=SimpleNamespace(
+            exceptions=SimpleNamespace(InvalidFileException=InvalidFileException)
+        ),
+    )
+    sys.modules.setdefault("openpyxl", module)
