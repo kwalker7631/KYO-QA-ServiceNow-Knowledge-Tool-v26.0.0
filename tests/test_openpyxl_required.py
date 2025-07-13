@@ -5,10 +5,16 @@ import queue
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+
+@pytest.fixture
+def temporary_sys_path():
+    original_sys_path = sys.path[:]
+    sys.path.insert(0, str(ROOT))
+    yield
+    sys.path = original_sys_path
 
 
-def test_export_to_excel_requires_openpyxl():
+def test_export_to_excel_requires_openpyxl(temporary_sys_path):
     sys.modules.pop('processing_engine', None)
     sys.modules.pop('openpyxl', None)
     spec = importlib.util.spec_from_file_location('processing_engine', ROOT / 'processing_engine.py')
