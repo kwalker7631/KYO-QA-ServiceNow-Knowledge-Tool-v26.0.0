@@ -1,5 +1,5 @@
 # config.py
-# Version: 26.0.0
+# Version: __version__
 # Last modified: 2025-07-06
 
 import json
