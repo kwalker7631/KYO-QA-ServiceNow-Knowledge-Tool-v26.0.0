@@ -18,6 +18,7 @@ from processing_helpers import fetch_data, parse_data, export_results
 
 logger = configure_logging("processing_engine")
 
+
 def find_column_index(header, possible_names):
     """Finds the index of a column from a list of possible names (case-insensitive and ignores spaces)."""
     header_lower = [str(h).lower().strip() for h in header]
@@ -27,6 +28,7 @@ def find_column_index(header, possible_names):
         except ValueError:
             continue
     return None
+
 
 def process_job(job, events):
     """
@@ -51,7 +53,13 @@ def process_job(job, events):
         input_source = job["input_path"]
 
         if is_file_locked(excel_path):
-            progress_queue.put({"type": "log", "tag": "error", "msg": f"Excel file is locked: {excel_path.name}"})
+            progress_queue.put(
+                {
+                    "type": "log",
+                    "tag": "error",
+                    "msg": f"Excel file is locked: {excel_path.name}",
+                }
+            )
             progress_queue.put({"type": "finish", "status": "Error"})
             return
 
@@ -59,49 +67,90 @@ def process_job(job, events):
         if isinstance(input_source, list):
             pdf_files = [Path(p) for p in input_source]
         elif isinstance(input_source, (str, Path)) and Path(input_source).is_dir():
-            pdf_files = sorted(list(Path(input_source).glob('**/*.pdf')))
-        
+            pdf_files = sorted(list(Path(input_source).glob("**/*.pdf")))
+
         if not pdf_files:
-            progress_queue.put({"type": "log", "tag": "warning", "msg": "No PDF files found."})
+            progress_queue.put(
+                {"type": "log", "tag": "warning", "msg": "No PDF files found."}
+            )
             progress_queue.put({"type": "finish", "status": "Complete"})
             return
 
         total_files = len(pdf_files)
-        progress_queue.put({"type": "log", "tag": "info", "msg": f"Found {total_files} PDF(s) to process."})
+        progress_queue.put(
+            {
+                "type": "log",
+                "tag": "info",
+                "msg": f"Found {total_files} PDF(s) to process.",
+            }
+        )
 
         all_results = []
         for i, pdf_path in enumerate(pdf_files):
             if cancel_event.is_set():
-                progress_queue.put({"type": "log", "tag": "warning", "msg": "Processing cancelled."})
+                progress_queue.put(
+                    {"type": "log", "tag": "warning", "msg": "Processing cancelled."}
+                )
                 break
-            
+
             while pause_event.is_set():
                 time.sleep(0.5)
 
             if is_file_locked(pdf_path):
-                progress_queue.put({"type": "log", "tag": "error", "msg": f"File locked, skipping: {pdf_path.name}"})
+                progress_queue.put(
+                    {
+                        "type": "log",
+                        "tag": "error",
+                        "msg": f"File locked, skipping: {pdf_path.name}",
+                    }
+                )
                 progress_queue.put({"type": "update_counts", "status": "Fail"})
                 review_data = {"filename": pdf_path.name, "reason": "File Locked"}
                 progress_queue.put({"type": "review_item", "data": review_data})
-                all_results.append({"filename": pdf_path.name, "status": "Fail", "models": "File Locked"})
-                progress_queue.put({"type": "progress", "value": ((i + 1) / total_files) * 100})
+                all_results.append(
+                    {
+                        "filename": pdf_path.name,
+                        "status": "Fail",
+                        "models": "File Locked",
+                    }
+                )
+                progress_queue.put(
+                    {"type": "progress", "value": ((i + 1) / total_files) * 100}
+                )
                 continue
 
-            progress_queue.put({"type": "status", "msg": f"Processing {i+1}/{total_files}: {pdf_path.name}"})
+            progress_queue.put(
+                {
+                    "type": "status",
+                    "msg": f"Processing {i+1}/{total_files}: {pdf_path.name}",
+                }
+            )
             result = process_single_pdf(pdf_path, progress_queue)
             all_results.append(result)
-            progress_queue.put({"type": "progress", "value": ((i + 1) / total_files) * 100})
+            progress_queue.put(
+                {"type": "progress", "value": ((i + 1) / total_files) * 100}
+            )
 
         if not cancel_event.is_set() and all_results:
-            progress_queue.put({"type": "status", "msg": "Exporting results to Excel..."})
+            progress_queue.put(
+                {"type": "status", "msg": "Exporting results to Excel..."}
+            )
             output_path = export_to_excel(all_results, excel_path, progress_queue)
 
         final_status = "Cancelled" if cancel_event.is_set() else "Complete"
-        progress_queue.put({"type": "finish", "status": final_status, "data": {"output_path": str(output_path)} if output_path else None})
+        progress_queue.put(
+            {
+                "type": "finish",
+                "status": final_status,
+                "data": {"output_path": str(output_path)} if output_path else None,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Critical error in processing engine: {e}", exc_info=True)
-        progress_queue.put({"type": "log", "tag": "error", "msg": f"Critical error: {e}"})
+        progress_queue.put(
+            {"type": "log", "tag": "error", "msg": f"Critical error: {e}"}
+        )
         progress_queue.put({"type": "finish", "status": "Error"})
 
 
@@ -111,107 +160,181 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
     try:
         cache_path = CACHE_DIR / f"{pdf_path.stem}_{pdf_path.stat().st_size}.json"
     except FileNotFoundError:
-        return {"filename": filename, "status": "Fail", "models": "Error: File not found"}
+        return {
+            "filename": filename,
+            "status": "Fail",
+            "models": "Error: File not found",
+        }
 
     if not ignore_cache and cache_path.exists():
         try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 cached_data = json.load(f)
-            progress_queue.put({"type": "log", "tag": "info", "msg": f"Loaded from cache: {filename}"})
-            progress_queue.put({"type": "update_counts", "status": cached_data.get("status", "Fail")})
+            progress_queue.put(
+                {"type": "log", "tag": "info", "msg": f"Loaded from cache: {filename}"}
+            )
+            progress_queue.put(
+                {"type": "update_counts", "status": cached_data.get("status", "Fail")}
+            )
             if cached_data.get("ocr_needed"):
                 progress_queue.put({"type": "increment_ocr_counter"})
             if cached_data.get("status") == "Needs Review":
-                progress_queue.put({"type": "review_item", "data": cached_data.get("review_info")})
+                progress_queue.put(
+                    {"type": "review_item", "data": cached_data.get("review_info")}
+                )
             return cached_data
         except (json.JSONDecodeError, KeyError):
-            progress_queue.put({"type": "log", "tag": "warning", "msg": f"Cache for {filename} corrupt. Reprocessing."})
+            progress_queue.put(
+                {
+                    "type": "log",
+                    "tag": "warning",
+                    "msg": f"Cache for {filename} corrupt. Reprocessing.",
+                }
+            )
 
     try:
         ocr_needed = _is_ocr_needed(str(pdf_path.resolve()))
         if ocr_needed:
-            progress_queue.put({"type": "log", "tag": "info", "msg": f"OCR required for: {filename}"})
+            progress_queue.put(
+                {"type": "log", "tag": "info", "msg": f"OCR required for: {filename}"}
+            )
             progress_queue.put({"type": "increment_ocr_counter"})
 
-        extracted_text = extract_text_from_pdf(str(pdf_path.resolve()), use_ocr=ocr_needed)
+        extracted_text = extract_text_from_pdf(
+            str(pdf_path.resolve()), use_ocr=ocr_needed
+        )
         if not extracted_text or not extracted_text.strip():
             raise ValueError("Text extraction returned empty content.")
 
         data = harvest_all_data(extracted_text, filename)
         status = "Pass" if data.get("models") != "Not Found" else "Needs Review"
-        
-        result = {"filename": filename, **data, "status": status, "ocr_needed": ocr_needed, "review_info": None}
+
+        result = {
+            "filename": filename,
+            **data,
+            "status": status,
+            "ocr_needed": ocr_needed,
+            "review_info": None,
+        }
 
         if status == "Needs Review":
             review_txt_path = PDF_TXT_DIR / "needs_review" / f"{pdf_path.stem}.txt"
             review_txt_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(review_txt_path, 'w', encoding='utf-8') as f:
+            with open(review_txt_path, "w", encoding="utf-8") as f:
                 f.write(extracted_text)
-            result["review_info"] = {"filename": filename, "txt_path": str(review_txt_path)}
+            result["review_info"] = {
+                "filename": filename,
+                "txt_path": str(review_txt_path),
+            }
             progress_queue.put({"type": "review_item", "data": result["review_info"]})
 
         progress_queue.put({"type": "update_counts", "status": status})
 
     except Exception as e:
         logger.error(f"Failed to process {filename}: {e}", exc_info=True)
-        result = {"filename": filename, "models": f"Error: {e}", "author": "", "status": "Fail", "ocr_needed": False, "review_info": None}
+        result = {
+            "filename": filename,
+            "models": f"Error: {e}",
+            "author": "",
+            "status": "Fail",
+            "ocr_needed": False,
+            "review_info": None,
+        }
         progress_queue.put({"type": "update_counts", "status": "Fail"})
 
     try:
         CACHE_DIR.mkdir(exist_ok=True)
-        with open(cache_path, 'w', encoding='utf-8') as f:
+        with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=4)
     except Exception as e:
         logger.error(f"Failed to write cache for {filename}: {e}")
 
     return result
 
+
 def export_to_excel(results, excel_path, progress_queue) -> Path | None:
     """Updates the provided Excel template and returns the path to the new file."""
     try:
-        workbook = openpyxl.load_workbook(excel_path)
+        try:
+            workbook = openpyxl.load_workbook(excel_path)
+        except openpyxl.utils.exceptions.InvalidFileException as exc:
+            msg = f"Failed to read Excel template: {exc}"
+            progress_queue.put({"type": "log", "tag": "error", "msg": msg})
+            return None
         sheet = workbook.active
         header = [cell.value for cell in sheet[1]]
-        
+
         # FIXED: Expanded list of possible names and made it case-insensitive
-        possible_filename_cols = ['Number', 'number', 'article number', 'kb number', 'kb_number']
-        possible_meta_cols = [META_COLUMN_NAME, 'meta', 'keywords']
-        possible_author_cols = [AUTHOR_COLUMN_NAME, 'author']
+        possible_filename_cols = [
+            "Number",
+            "number",
+            "article number",
+            "kb number",
+            "kb_number",
+        ]
+        possible_meta_cols = [META_COLUMN_NAME, "meta", "keywords"]
+        possible_author_cols = [AUTHOR_COLUMN_NAME, "author"]
 
         filename_col_idx = find_column_index(header, possible_filename_cols)
         meta_col_idx = find_column_index(header, possible_meta_cols)
         author_col_idx = find_column_index(header, possible_author_cols)
 
         if not filename_col_idx:
-            raise ValueError(f"Could not find an article number column. Looked for: {possible_filename_cols}")
+            raise ValueError(
+                f"Could not find an article number column. Looked for: {possible_filename_cols}"
+            )
         if not meta_col_idx:
-            raise ValueError(f"Could not find the meta/keywords column. Looked for: {possible_meta_cols}")
+            raise ValueError(
+                f"Could not find the meta/keywords column. Looked for: {possible_meta_cols}"
+            )
         if not author_col_idx:
-            raise ValueError(f"Could not find the author column. Looked for: {possible_author_cols}")
+            raise ValueError(
+                f"Could not find the author column. Looked for: {possible_author_cols}"
+            )
 
-        filename_to_row = {cell.value: row for row, cell in enumerate(sheet.iter_cols(min_col=filename_col_idx, max_col=filename_col_idx, min_row=2), 2)}
+        filename_to_row = {
+            cell.value: row
+            for row, cell in enumerate(
+                sheet.iter_cols(
+                    min_col=filename_col_idx, max_col=filename_col_idx, min_row=2
+                ),
+                2,
+            )
+        }
 
         for result in results:
-            if result['status'] == 'Fail':
+            if result["status"] == "Fail":
                 continue
-            
-            kb_number = Path(result['filename']).stem
+
+            kb_number = Path(result["filename"]).stem
             row_num = filename_to_row.get(kb_number)
 
             if row_num:
                 if not sheet.cell(row=row_num, column=meta_col_idx).value:
-                    sheet.cell(row=row_num, column=meta_col_idx).value = result['models']
+                    sheet.cell(row=row_num, column=meta_col_idx).value = result[
+                        "models"
+                    ]
                 if not sheet.cell(row=row_num, column=author_col_idx).value:
-                    sheet.cell(row=row_num, column=author_col_idx).value = result.get('author', '')
+                    sheet.cell(row=row_num, column=author_col_idx).value = result.get(
+                        "author", ""
+                    )
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         output_filename = f"{excel_path.stem}_processed_{timestamp}{excel_path.suffix}"
         output_path = excel_path.parent / output_filename
         workbook.save(output_path)
-        progress_queue.put({"type": "log", "tag": "success", "msg": f"Successfully saved updated Excel file to: {output_path}"})
+        progress_queue.put(
+            {
+                "type": "log",
+                "tag": "success",
+                "msg": f"Successfully saved updated Excel file to: {output_path}",
+            }
+        )
         return output_path
 
     except Exception as e:
         logger.error(f"Failed to export results to Excel: {e}", exc_info=True)
-        progress_queue.put({"type": "log", "tag": "error", "msg": f"Failed to export to Excel: {e}"})
+        progress_queue.put(
+            {"type": "log", "tag": "error", "msg": f"Failed to export to Excel: {e}"}
+        )
         return None
