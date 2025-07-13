@@ -7,7 +7,6 @@ import sys
 import shutil
 import tempfile
 import logging
-from logging_config import configure_logging
 import platform
 import subprocess # FIXED: Added missing import
 from tkinter import messagebox
@@ -15,8 +14,8 @@ from pathlib import Path
 import stat
 import zipfile
 
-# Configure logging
-logger = configure_logging(__name__)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+logger = logging.getLogger(__name__)
 
 def try_unlock_file(filepath: Path) -> bool:
     """Attempts to remove the read-only attribute from a file."""

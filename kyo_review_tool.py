@@ -4,10 +4,10 @@ from tkinter import messagebox, ttk
 from pathlib import Path
 import re
 import logging
-from logging_config import configure_logging
 import traceback
 
-logger = configure_logging("review_tool")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+logger = logging.getLogger("review_tool")
 
 try:
     from config import BRAND_COLORS, PDF_TXT_DIR
