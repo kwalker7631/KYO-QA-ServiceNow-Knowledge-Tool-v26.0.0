@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 def test_export_to_excel_requires_openpyxl():
     sys.modules.pop('processing_engine', None)
-    sys.modules['openpyxl'] = None
+    sys.modules.pop('openpyxl', None)
     spec = importlib.util.spec_from_file_location('processing_engine', ROOT / 'processing_engine.py')
     processing_engine = importlib.util.module_from_spec(spec)
     sys.modules['processing_engine'] = processing_engine
