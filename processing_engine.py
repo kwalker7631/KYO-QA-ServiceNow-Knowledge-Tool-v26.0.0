@@ -9,8 +9,6 @@ import queue
 import threading
 import logging
 logging.getLogger(__name__).setLevel(logging.DEBUG)
-
-from logging_config import configure_logging
 from data_harvesters import harvest_all_data
 from ocr_utils import extract_text_from_pdf, _is_ocr_needed
 from file_utils import is_file_locked
@@ -24,7 +22,8 @@ from config import (
 from processing_helpers import fetch_data, parse_data, export_results
 import re
 
-logger = configure_logging("processing_engine")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("processing_engine")
 
 def find_column_index(header, possible_names):
     """Finds the index of a column from a list of possible names (case-insensitive and ignores spaces)."""

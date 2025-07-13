@@ -1,7 +1,12 @@
 import unittest
-from tkinter import TclError
+import tkinter
+TclError = tkinter.TclError
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from kyo_qa_tool_app import KyoQAToolApp
+
 
 class LaunchTest(unittest.TestCase):
     def test_app_launch(self):
@@ -12,8 +17,9 @@ class LaunchTest(unittest.TestCase):
             app.destroy()
         except TclError:
             self.skipTest("Tkinter display not available")
-        except Exception as e:
-            self.fail(f"App failed to launch: {e}")
+        except Exception as exc:
+            self.fail(f"App failed to launch: {exc}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

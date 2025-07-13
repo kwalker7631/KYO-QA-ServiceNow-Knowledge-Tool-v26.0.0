@@ -1,10 +1,11 @@
 # data_harvesters.py
 import re
 import importlib
-from logging_config import configure_logging
+import logging
 
 # Configure logging
-logger = configure_logging("harvesters")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("harvesters")
 
 # --- Default Patterns (Single Source of Truth) ---
 DEFAULT_MODEL_PATTERNS = [

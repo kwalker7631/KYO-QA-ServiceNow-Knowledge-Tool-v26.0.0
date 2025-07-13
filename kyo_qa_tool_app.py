@@ -27,7 +27,6 @@ from file_utils import (
 )
 from kyo_review_tool import ReviewWindow
 from version import VERSION
-import logging_utils
 from config import CACHE_DIR
 from gui_components import (
     setup_high_contrast_styles,
@@ -41,7 +40,8 @@ from gui_components import (
     create_data_harvest_tab,
 )
 
-logger = logging_utils.setup_logger("app")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class KyoQAToolApp(tk.Tk):
