@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 import queue
 import threading
-import openpyxl
+try:
+    import openpyxl
+except ImportError:  # pragma: no cover - environment may not have openpyxl
+    openpyxl = None
 import logging
 logging.getLogger(__name__).setLevel(logging.DEBUG)
 
@@ -269,6 +272,9 @@ def export_to_excel(
     qa_column_name: str | None = None,
 ) -> Path | None:
     """Updates the provided Excel template and returns the path to the new file."""
+
+    if openpyxl is None:
+        raise ImportError("openpyxl is required for export_to_excel")
 
     try:
         skipped_files = []
