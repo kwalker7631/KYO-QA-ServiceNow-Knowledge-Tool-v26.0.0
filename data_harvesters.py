@@ -48,9 +48,8 @@ def harvest_models(text: str, filename: str) -> list:
     if not text:
         return []
 
-    model_patterns = get_combined_patterns("MODEL_PATTERNS", DEFAULT_MODEL_PATTERNS)
-    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
-    all_search_patterns = model_patterns + qa_patterns
+    model_patterns = get_combined_patterns('MODEL_PATTERNS', DEFAULT_MODEL_PATTERNS)
+    all_search_patterns = model_patterns
 
     found = set()
     for pattern in all_search_patterns:
@@ -71,6 +70,26 @@ def harvest_models(text: str, filename: str) -> list:
         standardized_found.add(item)
 
     return sorted(list(standardized_found))
+
+
+def harvest_qa_numbers(text: str) -> list:
+    """Extract QA numbers using combined default and custom patterns."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns('QA_NUMBER_PATTERNS', DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(f"Invalid regex pattern skipped: '{pattern}'. Error: {e}")
+
+    return sorted(found)
 
 
 def harvest_author(text: str) -> str:
@@ -105,9 +124,11 @@ def harvest_all_data(text: str, filename: str) -> dict:
     try:
         models = harvest_models(text, filename)
         models_str = ", ".join(models) if models else "Not Found"
+        qa_nums = harvest_qa_numbers(text)
+        qa_nums_str = ", ".join(qa_nums) if qa_nums else ""
         author_str = harvest_author(text)
 
-        return {"models": models_str, "author": author_str}
+        return {"models": models_str, "qa_numbers": qa_nums_str, "author": author_str}
     except Exception as e:
         logger.error(f"Critical error during data harvesting for {filename}: {e}", exc_info=True)
-        return {"models": "Error: Harvesting Failed", "author": ""}
+        return {"models": "Error: Harvesting Failed", "qa_numbers": "", "author": ""}

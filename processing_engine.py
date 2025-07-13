@@ -154,7 +154,15 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
 
     except Exception as e:
         logger.error(f"Failed to process {filename}: {e}", exc_info=True)
-        result = {"filename": filename, "models": f"Error: {e}", "author": "", "status": "Fail", "ocr_needed": False, "review_info": None}
+        result = {
+            "filename": filename,
+            "models": f"Error: {e}",
+            "qa_numbers": "",
+            "author": "",
+            "status": "Fail",
+            "ocr_needed": False,
+            "review_info": None,
+        }
         progress_queue.put({"type": "update_counts", "status": "Fail"})
 
     try:
