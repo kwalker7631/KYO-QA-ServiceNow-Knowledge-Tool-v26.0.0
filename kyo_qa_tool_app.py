@@ -203,7 +203,6 @@ class KyoQAToolApp(tk.Tk):
         if path:
             self.selected_excel.set(path)
 
-
     def browse_harvest_file(self):
         path = filedialog.askopenfilename(
             title="Select PDF File", filetypes=[("PDF Files", "*.pdf")]
@@ -382,14 +381,6 @@ class KyoQAToolApp(tk.Tk):
         except Exception as e:  # pragma: no cover - just log
             logger.error(f"Manual export failed: {e}", exc_info=True)
             messagebox.showerror("Export Error", str(e))
-
-    def pause_processing(self):
-        self.pause_event.set()
-        self.status_current_file.set("Processing paused")
-
-    def resume_processing(self):
-        self.pause_event.clear()
-        self.status_current_file.set("Resuming...")
 
     def open_review_for_selected_file(self):
         selection = self.review_tree.selection()
