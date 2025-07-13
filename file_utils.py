@@ -14,7 +14,6 @@ from pathlib import Path
 import stat
 import zipfile
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
 
 def try_unlock_file(filepath: Path) -> bool:
