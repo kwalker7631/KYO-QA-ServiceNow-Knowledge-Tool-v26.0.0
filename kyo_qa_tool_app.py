@@ -14,7 +14,6 @@ import os
 import json
 
 import logging
-logging.getLogger(__name__).setLevel(logging.DEBUG)
 
 from ocr_utils import extract_text_from_pdf
 from data_harvesters import harvest_all_data
@@ -27,7 +26,7 @@ from file_utils import (
 )
 from kyo_review_tool import ReviewWindow
 from version import VERSION
-import logging_utils
+import logging
 from config import CACHE_DIR
 from gui_components import (
     setup_high_contrast_styles,
@@ -41,7 +40,13 @@ from gui_components import (
     create_data_harvest_tab,
 )
 
-logger = logging_utils.setup_logger("app")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class KyoQAToolApp(tk.Tk):
@@ -200,6 +205,8 @@ class KyoQAToolApp(tk.Tk):
         self.selected_folder.set(f"[ZIP] {zip_path.name} ({len(pdf_files)} files)")
 
     def browse_excel(self):
+        """Prompt user to select an Excel template file."""
+        # TODO: validate the selected file before assigning
         path = filedialog.askopenfilename(
             title="Select Excel Template", filetypes=[("Excel Files", "*.xlsx *.xlsm")]
         )
@@ -351,6 +358,7 @@ class KyoQAToolApp(tk.Tk):
 
     def manual_export(self):
         """Export cached JSON results to an Excel file."""
+        # TODO: add option to choose output filename/location
         excel_path = self.selected_excel.get()
         if not excel_path:
             messagebox.showwarning(

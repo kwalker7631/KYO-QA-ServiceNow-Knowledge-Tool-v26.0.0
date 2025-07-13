@@ -15,5 +15,5 @@ class LaunchTest(unittest.TestCase):
         except Exception as e:
             self.fail(f"App failed to launch: {e}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

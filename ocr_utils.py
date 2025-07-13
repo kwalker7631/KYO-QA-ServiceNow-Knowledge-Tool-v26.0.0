@@ -10,7 +10,6 @@ import os
 import shutil
 from pathlib import Path
 import logging
-from logging_config import configure_logging
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover - optional dependency
@@ -20,8 +19,7 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     pytesseract = None
 
-# Configure logger
-logger = configure_logging("ocr_utils")
+logger = logging.getLogger("ocr_utils")
 
 # --- Tesseract Initialization ---
 TESSERACT_AVAILABLE = False
