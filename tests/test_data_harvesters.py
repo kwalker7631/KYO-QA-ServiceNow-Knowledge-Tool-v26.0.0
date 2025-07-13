@@ -18,4 +18,3 @@ def test_harvest_all_data_includes_qa_numbers():
     data = harvest_all_data(text, "sample.txt")
     assert "QA-3003" in data["qa_numbers"]
     assert "SB-4004" in data["qa_numbers"]
-
