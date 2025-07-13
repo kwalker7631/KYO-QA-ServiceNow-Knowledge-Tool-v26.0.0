@@ -10,9 +10,7 @@ import threading
 import queue
 import time
 import sys
-import os
 import json
-
 import logging
 
 from ocr_utils import extract_text_from_pdf
@@ -26,7 +24,6 @@ from file_utils import (
 )
 from kyo_review_tool import ReviewWindow
 from version import VERSION
-import logging
 from config import CACHE_DIR
 from gui_components import (
     setup_high_contrast_styles,
@@ -37,7 +34,6 @@ from gui_components import (
     create_footer,
     create_review_tab,
     create_harvest_tab,
-    create_data_harvest_tab,
 )
 
 logger = logging.getLogger(__name__)

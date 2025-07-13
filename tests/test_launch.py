@@ -1,10 +1,17 @@
 import unittest
-from tkinter import TclError
+try:
+    import tkinter
+    from tkinter import TclError
+except Exception:  # pragma: no cover - tkinter not installed
+    tkinter = None
+    TclError = Exception
 
 from kyo_qa_tool_app import KyoQAToolApp
 
 class LaunchTest(unittest.TestCase):
     def test_app_launch(self):
+        if tkinter is None:
+            self.skipTest("Tkinter not available")
         try:
             app = KyoQAToolApp()
             app.withdraw()

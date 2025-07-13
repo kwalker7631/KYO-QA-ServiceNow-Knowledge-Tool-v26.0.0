@@ -135,7 +135,6 @@ def process_job(job, events):
                 {"type": "progress", "value": ((i + 1) / total_files) * 100}
             )
 
-        skipped_files = []
         if not cancel_event.is_set() and all_results:
             progress_queue.put(
                 {"type": "status", "msg": "Exporting results to Excel..."}

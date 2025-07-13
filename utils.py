@@ -16,10 +16,17 @@ from data_harvesters import (
     harvest_author as harvest_metadata,
 )
 
+import importlib
+import logging
+import os
+import re
+import types
+from contextlib import nullcontext
+from functools import lru_cache
+
 try:
     from extract.common import bulletproof_extraction
 except Exception:  # fallback using regex
-    import re
 
     def bulletproof_extraction(text, patterns=None):
         results = []
@@ -40,9 +47,6 @@ __all__ = [
 ]
 
 # --- 2. Excel Generation ---
-import logging
-import types
-from contextlib import nullcontext
 
 try:
     import pandas as pd  # type: ignore
@@ -124,8 +128,6 @@ PART_NUMBER_PATTERNS = [
 ]
 
 # --- 5. Translation Helpers ---
-import importlib
-from functools import lru_cache
 
 
 @lru_cache(maxsize=1)
@@ -152,7 +154,6 @@ def auto_translate_text(text: str, target_lang: str = "en") -> str | None:
 
 
 # --- 6. Error Tracking ---
-import os
 
 try:
     from sentry_sdk import init
@@ -185,7 +186,6 @@ def get_handler() -> logging.Handler | None:
 
 
 # --- 7. Recycle Helpers ---
-import re
 
 DEFAULT_RECYCLING_RULES = [
     (r"\s{2,}", " "),
