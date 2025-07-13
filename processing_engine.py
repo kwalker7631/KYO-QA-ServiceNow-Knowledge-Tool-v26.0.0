@@ -136,18 +136,15 @@ def process_job(job, events):
             progress_queue.put(
                 {"type": "status", "msg": "Exporting results to Excel..."}
             )
-            output_path, skipped_files = export_to_excel(
-                all_results, excel_path, progress_queue
-            )
+            output_path = export_to_excel(all_results, excel_path, progress_queue)
 
         final_status = "Cancelled" if cancel_event.is_set() else "Complete"
-        final_data = {}
-        if output_path:
-            final_data["output_path"] = str(output_path)
-        if skipped_files:
-            final_data["skipped_files"] = skipped_files
         progress_queue.put(
-            {"type": "finish", "status": final_status, "data": final_data or None}
+            {
+                "type": "finish",
+                "status": final_status,
+                "data": {"output_path": str(output_path)} if output_path else None,
+            }
         )
 
     except Exception as e:
@@ -256,16 +253,16 @@ def process_single_pdf(pdf_path, progress_queue, ignore_cache=False):
     return result
 
 
-def export_to_excel(
-    results, excel_path, progress_queue
-) -> tuple[Path | None, list[str]]:
-    """Updates the provided Excel template and returns the path to the new file.
+def export_to_excel(results, excel_path, progress_queue) -> Path | None:
+    """Updates the provided Excel template and returns the path to the new file."""
 
-    A list of PDFs that could not be mapped to any row in the Excel template is
-    also returned for reporting purposes.
-    """
     try:
-        workbook = openpyxl.load_workbook(excel_path)
+        try:
+            workbook = openpyxl.load_workbook(excel_path)
+        except openpyxl.utils.exceptions.InvalidFileException as exc:
+            msg = f"Failed to read Excel template: {exc}"
+            progress_queue.put({"type": "log", "tag": "error", "msg": msg})
+            return None
         sheet = workbook.active
         header = [cell.value for cell in sheet[1]]
 
@@ -307,8 +304,6 @@ def export_to_excel(
             )
         }
 
-        skipped_files = []
-
         for result in results:
             if result["status"] == "Fail":
                 continue
@@ -316,17 +311,15 @@ def export_to_excel(
             kb_number = Path(result["filename"]).stem
             row_num = filename_to_row.get(kb_number)
 
-            if row_num is None:
-                logger.warning(f"No matching row for {result['filename']}")
-                skipped_files.append(result["filename"])
-                continue
-
-            if not sheet.cell(row=row_num, column=meta_col_idx).value:
-                sheet.cell(row=row_num, column=meta_col_idx).value = result["models"]
-            if not sheet.cell(row=row_num, column=author_col_idx).value:
-                sheet.cell(row=row_num, column=author_col_idx).value = result.get(
-                    "author", ""
-                )
+            if row_num:
+                if not sheet.cell(row=row_num, column=meta_col_idx).value:
+                    sheet.cell(row=row_num, column=meta_col_idx).value = result[
+                        "models"
+                    ]
+                if not sheet.cell(row=row_num, column=author_col_idx).value:
+                    sheet.cell(row=row_num, column=author_col_idx).value = result.get(
+                        "author", ""
+                    )
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         output_filename = f"{excel_path.stem}_processed_{timestamp}{excel_path.suffix}"
@@ -354,4 +347,4 @@ def export_to_excel(
         progress_queue.put(
             {"type": "log", "tag": "error", "msg": f"Failed to export to Excel: {e}"}
         )
-        return None, []
+        return None
