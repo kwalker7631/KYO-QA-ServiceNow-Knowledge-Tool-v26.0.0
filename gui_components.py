@@ -4,7 +4,9 @@
 
 import tkinter as tk
 from tkinter import ttk
-from branding import KyoceraColors
+import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
+from .branding import KyoceraColors
 
 
 def setup_high_contrast_styles(app):

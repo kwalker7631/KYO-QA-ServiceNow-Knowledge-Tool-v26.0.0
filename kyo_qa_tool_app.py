@@ -13,21 +13,24 @@ import sys
 import os
 import json
 
-from processing_engine import process_job
-from ocr_utils import extract_text_from_pdf
-from data_harvesters import harvest_all_data
-from utils import ExcelGenerator
-from file_utils import (
+import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
+
+from .processing_engine import process_job
+from .ocr_utils import extract_text_from_pdf
+from .data_harvesters import harvest_all_data
+from .utils import ExcelGenerator
+from .file_utils import (
     ensure_folders,
     cleanup_directory,
     extract_zip_to_temp,
     open_file_in_default_app,
 )
-from kyo_review_tool import ReviewWindow
-from version import VERSION
-import logging_utils
-from config import CACHE_DIR
-from gui_components import (
+from .kyo_review_tool import ReviewWindow
+from .version import VERSION
+from . import logging_utils
+from .config import CACHE_DIR
+from .gui_components import (
     setup_high_contrast_styles,
     create_main_header,
     create_io_section,
@@ -36,6 +39,7 @@ from gui_components import (
     create_footer,
     create_review_tab,
     create_harvest_tab,
+    create_data_harvest_tab,
 )
 
 logger = logging_utils.setup_logger("app")
@@ -371,9 +375,11 @@ class KyoQAToolApp(tk.Tk):
         try:
             import processing_engine as pe
 
-            output, skipped = pe.export_to_excel(
-                results, Path(excel_path), self.response_queue
-            )
+            result = pe.export_to_excel(results, Path(excel_path), self.response_queue)
+            if isinstance(result, tuple):
+                output, skipped = result
+            else:
+                output, skipped = result, None
             if output:
                 msg = f"Results exported to:\n{output}"
                 if skipped:

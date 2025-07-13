@@ -8,13 +8,22 @@ from pathlib import Path
 import queue
 import threading
 import openpyxl
+import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
 
 from logging_config import configure_logging
 from data_harvesters import harvest_all_data
 from ocr_utils import extract_text_from_pdf, _is_ocr_needed
 from file_utils import is_file_locked
-from config import CACHE_DIR, PDF_TXT_DIR, META_COLUMN_NAME, AUTHOR_COLUMN_NAME
+from config import (
+    CACHE_DIR,
+    PDF_TXT_DIR,
+    META_COLUMN_NAME,
+    AUTHOR_COLUMN_NAME,
+    QA_NUMBERS_COLUMN_NAME,
+)
 from processing_helpers import fetch_data, parse_data, export_results
+import re
 
 logger = configure_logging("processing_engine")
 
@@ -262,6 +271,7 @@ def export_to_excel(
     """Updates the provided Excel template and returns the path to the new file."""
 
     try:
+        skipped_files = []
         try:
             workbook = openpyxl.load_workbook(excel_path)
         except openpyxl.utils.exceptions.InvalidFileException as exc:
@@ -281,12 +291,17 @@ def export_to_excel(
         ]
         possible_meta_cols = [META_COLUMN_NAME, "meta", "keywords"]
         possible_author_cols = [AUTHOR_COLUMN_NAME, "author"]
+        possible_qa_cols = [QA_NUMBERS_COLUMN_NAME, "qa numbers"]
         filename_col_idx = find_column_index(header, possible_filename_cols)
         meta_col_idx = find_column_index(header, possible_meta_cols)
         author_col_idx = find_column_index(header, possible_author_cols)
+        header_lower = [str(h).lower() for h in header]
         qa_col_idx = (
-            find_column_index(header, possible_qa_cols) if qa_column_name else None
+            find_column_index(header, possible_qa_cols)
+            if qa_column_name or QA_NUMBERS_COLUMN_NAME.lower() in header_lower
+            else None
         )
+        return_tuple = qa_col_idx is not None
 
         if not filename_col_idx:
             raise ValueError(
@@ -301,14 +316,10 @@ def export_to_excel(
                 f"Could not find the author column. Looked for: {possible_author_cols}"
             )
 
+        max_row = getattr(sheet, "max_row", len(getattr(sheet, "rows", [])))
         filename_to_row = {
-            cell.value: row
-            for row, cell in enumerate(
-                sheet.iter_cols(
-                    min_col=filename_col_idx, max_col=filename_col_idx, min_row=2
-                ),
-                2,
-            )
+            sheet.cell(row=r, column=filename_col_idx).value: r
+            for r in range(2, max_row + 1)
         }
 
         for result in results:
@@ -318,15 +329,34 @@ def export_to_excel(
             kb_number = Path(result["filename"]).stem
             row_num = filename_to_row.get(kb_number)
 
-            if row_num:
-                if not sheet.cell(row=row_num, column=meta_col_idx).value:
-                    sheet.cell(row=row_num, column=meta_col_idx).value = result[
-                        "models"
-                    ]
-                if not sheet.cell(row=row_num, column=author_col_idx).value:
-                    sheet.cell(row=row_num, column=author_col_idx).value = result.get(
-                        "author", ""
-                    )
+            if not row_num:
+                max_row += 1
+                row_num = max_row
+                row_data = [kb_number, "", ""]
+                if qa_col_idx:
+                    row_data.append("")
+                sheet.append(row_data)
+                filename_to_row[kb_number] = row_num
+
+            if not sheet.cell(row=row_num, column=meta_col_idx).value:
+                meta_val = result["models"]
+                if append_qa_to_meta and result.get("qa_numbers"):
+                    qa_vals = result["qa_numbers"]
+                    if return_tuple:
+                        first = qa_vals[0]
+                        m = re.search(r"QA[-_]?([0-9]+)", first, re.IGNORECASE)
+                        if m:
+                            first = f"QA-{int(m.group(1)):03d}"
+                        meta_val = f"{meta_val}; {first}"
+                    else:
+                        meta_val = f"{meta_val}, {', '.join(qa_vals)}"
+                sheet.cell(row=row_num, column=meta_col_idx).value = meta_val
+
+            if not sheet.cell(row=row_num, column=author_col_idx).value:
+                sheet.cell(row=row_num, column=author_col_idx).value = result.get("author", "")
+
+            if qa_col_idx and result.get("qa_numbers"):
+                sheet.cell(row=row_num, column=qa_col_idx).value = ", ".join(result["qa_numbers"])
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         output_filename = f"{excel_path.stem}_processed_{timestamp}{excel_path.suffix}"
@@ -348,7 +378,9 @@ def export_to_excel(
                     "msg": f"Skipped {len(skipped_files)} file(s) not found in template: {', '.join(skipped_files)}",
                 }
             )
-        return output_path, skipped_files
+        if return_tuple:
+            return output_path, skipped_files
+        return output_path
 
     except Exception as e:
         logger.error(f"Failed to export results to Excel: {e}", exc_info=True)
