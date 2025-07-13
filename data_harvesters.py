@@ -77,6 +77,26 @@ def harvest_models(text: str, filename: str) -> list:
 
 
 def harvest_qa_numbers(text: str) -> list:
+    """Extract QA numbers using combined default and custom patterns."""
+    if not text:
+        return []
+
+    qa_patterns = get_combined_patterns('QA_NUMBER_PATTERNS', DEFAULT_QA_PATTERNS)
+
+    found = set()
+    for pattern in qa_patterns:
+        try:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            for match in matches:
+                if not any(ex in match for ex in EXCLUSION_PATTERNS):
+                    found.add(match.strip())
+        except re.error as e:
+            logger.warning(f"Invalid regex pattern skipped: '{pattern}'. Error: {e}")
+
+    return sorted(found)
+
+
+def harvest_qa_numbers(text: str) -> list:
     """Extracts QA and SB numbers using combined default and custom patterns."""
     if not text:
         return []
