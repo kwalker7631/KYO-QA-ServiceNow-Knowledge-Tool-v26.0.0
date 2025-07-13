@@ -40,8 +40,13 @@ from gui_components import (
     create_data_harvest_tab,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class KyoQAToolApp(tk.Tk):
