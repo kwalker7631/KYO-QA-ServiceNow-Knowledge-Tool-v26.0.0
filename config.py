@@ -5,6 +5,7 @@
 import json
 import os
 import logging
+logging.getLogger(__name__).setLevel(logging.DEBUG)
 from pathlib import Path
 from version import __version__
 from branding import KyoceraColors
@@ -42,6 +43,7 @@ STATUS_COLUMN_NAME = "Validation Status"
 DESCRIPTION_COLUMN_NAME = "description"
 META_COLUMN_NAME = "meta"
 AUTHOR_COLUMN_NAME = "author"
+QA_NUMBERS_COLUMN_NAME = "QA Numbers"
 
 
 # --- Functions for GUI Configuration ---

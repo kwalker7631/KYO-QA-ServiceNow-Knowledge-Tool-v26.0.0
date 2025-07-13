@@ -7,6 +7,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
+import importlib.util
+import types
 
 dummy = SimpleNamespace()
 sys.modules.setdefault("openpyxl", SimpleNamespace(load_workbook=lambda *a, **k: None))
@@ -23,7 +25,16 @@ for mod in [
     sys.modules.setdefault(mod, dummy)
 sys.modules.setdefault("PIL", SimpleNamespace(Image=SimpleNamespace()))
 
-import kyo_qa_tool_app as app_module
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location(
+    "pkg.kyo_qa_tool_app", ROOT / "kyo_qa_tool_app.py", submodule_search_locations=[str(ROOT)]
+)
+pkg = types.ModuleType("pkg")
+pkg.__path__ = [str(ROOT)]
+sys.modules.setdefault("pkg", pkg)
+app_module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = app_module
+spec.loader.exec_module(app_module)
 
 
 class DummyVar:
