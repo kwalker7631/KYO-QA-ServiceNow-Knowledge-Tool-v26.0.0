@@ -189,7 +189,10 @@ def export_to_excel(results, excel_path, progress_queue) -> Path | None:
         if not author_col_idx:
             raise ValueError(f"Could not find the author column. Looked for: {possible_author_cols}")
 
-        filename_to_row = {cell.value: row for row, cell in enumerate(sheet.iter_cols(min_col=filename_col_idx, max_col=filename_col_idx, min_row=2), 2)}
+        filename_to_row = {
+            row[filename_col_idx - 1].value: idx
+            for idx, row in enumerate(sheet.iter_rows(min_row=2), start=2)
+        }
 
         for result in results:
             if result['status'] == 'Fail':
