@@ -3,7 +3,6 @@ import re
 import importlib
 import logging
 from logging_config import configure_logging
-from pathlib import Path
 
 # Configure logging
 logger = configure_logging("harvesters")
