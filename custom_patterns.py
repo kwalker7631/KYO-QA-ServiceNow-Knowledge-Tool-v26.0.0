@@ -1,5 +1,5 @@
 # custom_patterns.py
-# Version: 2.2.0
+# Version: 2.2.1
 # Last modified: 2025-07-13
 
 import logging
@@ -28,7 +28,10 @@ DEFAULT_PATTERNS = {
         "CS\\s*\\d{4}ci"
     ],
     "qa_number_patterns.json": [
-        "QA\\s*[A-Z]\\d{3,}"
+        # This pattern is more robust. It looks for "QA" followed by
+        # an underscore or a space, and then one or more digits.
+        # It will match formats like "QA_20141" or "QA 12345".
+        "QA[ _]\\d+"
     ]
 }
 
@@ -38,12 +41,10 @@ def _initialize_patterns():
     This function is designed to be run once at startup.
     """
     try:
-        # 1. Create the patterns directory if it doesn't exist
         if not PATTERNS_DIR.exists():
             logger.warning(f"Patterns directory not found at '{PATTERNS_DIR}'. Creating it.")
             PATTERNS_DIR.mkdir(parents=True, exist_ok=True)
 
-        # 2. Create default pattern files if they are missing
         for filename, patterns in DEFAULT_PATTERNS.items():
             file_path = PATTERNS_DIR / filename
             if not file_path.exists():
@@ -53,7 +54,6 @@ def _initialize_patterns():
 
     except Exception as e:
         logger.critical(f"Failed to initialize the patterns directory or files. Error: {e}", exc_info=True)
-        # If we can't create the files, we can't proceed.
         raise RuntimeError("Could not create necessary pattern files.") from e
 
 def _load_patterns_from_json(file_path: Path) -> list:
@@ -69,8 +69,7 @@ def _load_patterns_from_json(file_path: Path) -> list:
         return []
 
 # --- Main Loading Logic ---
-# This block runs when the module is first imported.
-_initialize_patterns() # Ensure files exist before trying to load them.
+_initialize_patterns() 
 
 MODEL_PATTERNS = _load_patterns_from_json(PATTERNS_DIR / "model_patterns.json")
 QA_NUMBER_PATTERNS = _load_patterns_from_json(PATTERNS_DIR / "qa_number_patterns.json")

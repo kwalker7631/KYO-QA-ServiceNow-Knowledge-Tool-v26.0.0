@@ -1,16 +1,40 @@
 @echo off
-REM START.bat
-REM Version: 32.5.0
-REM Last modified: 2025-07-06
-REM This is the official script to launch the KYO QA ServiceNow Knowledge Tool.
+title KYO QA Tool Launcher v26.0.0
+color 0A
 
-ECHO.
-ECHO --- Starting KYO QA ServiceNow Knowledge Tool ---
-ECHO.
+echo.
+echo ================================================================
+echo   KYO QA ServiceNow Knowledge Tool v26.0.0
+echo   Starting Application...
+echo ================================================================
+echo.
 
-REM Run the correct and reliable Python startup script.
-python start_tool.py
+REM Check if Python is available
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Python not found in PATH
+    echo Please install Python 3.9+ and add it to your PATH
+    echo Download from: https://www.python.org/downloads/
+    echo.
+    pause
+    exit /b 1
+)
 
-ECHO.
-ECHO --- Application has closed. ---
+REM Try to start with the simple launcher first
+if exist "launcher.py" (
+    echo Using simple launcher...
+    python launcher.py
+) else if exist "kyo_qa_tool_app.py" (
+    echo Using direct application launch...
+    python kyo_qa_tool_app.py
+) else (
+    echo ERROR: Application files not found
+    echo Please ensure kyo_qa_tool_app.py or launcher.py exists
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
+echo Application has closed.
 pause

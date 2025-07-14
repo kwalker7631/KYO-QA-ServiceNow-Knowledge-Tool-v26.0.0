@@ -17,3 +17,11 @@ class APIError(Exception):
 class ConfigurationError(Exception):
     """Custom exception for configuration-related errors."""
     pass
+
+# === AUTO-GENERATED FUNCTIONS FOR CUSTOM_EXCEPTIONS ===
+# Add these functions to custom_exceptions.py
+
+
+class FileLockError(Exception):
+    """Exception for file lock errors."""
+    pass

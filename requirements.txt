@@ -1,15 +1,29 @@
-# requirements.txt
-# Version: 32.3.0
-# Last modified: 2025-07-06
+# KYO QA Tool v26.0.0 - Requirements
+# Core Data Processing
+pandas>=2.0.0
+openpyxl>=3.1.0
 
-# Core dependencies for PDF and Excel processing.
-# The application uses its own internal 'file_utils.py' module.
-# Do NOT add 'file-utils' to this list, as it is an incorrect
-# external package that requires the Rust compiler.
+# PDF Processing
+PyMuPDF>=1.23.0
 
-openpyxl
-Pillow
-PyMuPDF
-pytesseract
-opencv-python-headless
-colorama # For styled terminal output
+# Image Processing & OCR
+Pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+pytesseract>=0.3.10
+
+# Utilities
+colorama>=0.4.6
+python-dateutil>=2.8.0
+
+# Optional: AI/LLM (if using AI features)
+# ollama>=0.1.0
+
+# Note: tkinter is included with Python standard library
+# If you get tkinter import errors on Linux, install with:
+# sudo apt-get install python3-tk
+
+# Tesseract OCR Installation Notes:
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+# Linux: sudo apt-get install tesseract-ocr
+# macOS: brew install tesseract

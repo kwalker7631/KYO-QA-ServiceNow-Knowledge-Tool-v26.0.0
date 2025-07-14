@@ -1,49 +1,34 @@
 # branding.py
-# Version: 31.0.0
-# Last modified: 2025-07-06
-
-import logging
-logging.getLogger(__name__).setLevel(logging.DEBUG)
-
+# Version: 1.1.0
+# Last modified: 2025-07-13
 
 class KyoceraColors:
-    """
-    Defines a high-contrast color palette for the application.
-    """
-
-    # --- Primary Branding ---
-    KYOCERA_RED = "#DA291C"
-
-    # --- UI Palette for High Visibility ---
-    BACKGROUND_MAIN = "#F0F2F5"  # Light grey for the main window
-    WIDGET_BG = "#FFFFFF"  # White for input fields and cards
-
-    # --- High Contrast Mode ---
-    HIGH_CONTRAST_BG = "#000000"  # Black background for accessibility
-    HIGH_CONTRAST_TEXT = "#FFFFFF"  # White text for accessibility
-
-    TEXT_DARK = "#212529"  # Very dark grey for primary text
-    TEXT_MUTED = "#6c757d"  # Muted grey for secondary labels
-
-    PRIMARY_ACTION = "#0d6efd"  # A strong blue for primary buttons
-    PRIMARY_ACTION_HOVER = "#0b5ed7"  # A darker blue for hover
-
-    BORDER_COLOR = "#ced4da"  # A clear border color for widgets
-
-    # --- Status Colors ---
-    STATUS_SUCCESS = "#198754"  # Green for success
-    STATUS_WARNING = "#ffc107"  # Yellow for warnings
-    STATUS_ERROR = "#dc3545"  # Red for errors
-    STATUS_INFO_TEXT = "#0dcaf0"  # Cyan for informational link buttons
-
-    # Legacy aliases for backward compatibility
-    BACKGROUND_WIDGET = WIDGET_BG
-    KYOCERA_BLACK = "#000000"
-    TEXT_PRIMARY = TEXT_DARK
-    TEXT_SECONDARY = TEXT_MUTED
-    PRIMARY_BLUE = PRIMARY_ACTION
-    STATUS_INFO = STATUS_INFO_TEXT
-
-    # --- High Contrast Theme ---
-    HIGH_CONTRAST_BG = "#000000"
+    """Defines the color palette for the Kyocera application branding."""
+    # Core Brand Colors
+    KYOCERA_RED = "#ED1C24"
+    
+    # UI Element Colors
+    BACKGROUND_MAIN = "#F5F5F5"
+    WIDGET_BG = "#FFFFFF"
+    BORDER_COLOR = "#CCCCCC"
+    
+    # Text Colors
+    TEXT_DARK = "#333333"
+    TEXT_MUTED = "#6c757d"
+    
+    # Action Colors
+    PRIMARY_ACTION = "#007BFF"
+    PRIMARY_ACTION_HOVER = "#0056b3"
+    
+    # Status Colors
+    STATUS_SUCCESS = "#28A745"
+    STATUS_WARNING = "#FFC107"
+    STATUS_ERROR = "#DC3545"
+    
+    # Background colors for status rows/tags
+    STATUS_WARNING_BG = "#FFF3CD" # Light yellow
+    STATUS_ERROR_BG = "#F8D7DA"   # Light red
+    
+    # High Contrast (for specific widgets)
+    HIGH_CONTRAST_BG = "#343A40"
     HIGH_CONTRAST_TEXT = "#FFFFFF"
