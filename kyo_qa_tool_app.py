@@ -1,6 +1,6 @@
 # kyo_qa_tool_app.py
-# Version: 33.0.0
-# Last modified: 2025-07-06
+# Version: 33.1.0
+# Last modified: 2025-07-13
 
 import tkinter as tk
 from tkinter import ttk
@@ -15,7 +15,7 @@ import logging
 
 from ocr_utils import extract_text_from_pdf
 from data_harvesters import harvest_all_data
-from utils import ExcelGenerator
+from excel_generator import ExcelGenerator
 from file_utils import (
     ensure_folders,
     cleanup_directory,
@@ -202,7 +202,6 @@ class KyoQAToolApp(tk.Tk):
 
     def browse_excel(self):
         """Prompt user to select an Excel template file."""
-        # TODO: validate the selected file before assigning
         path = filedialog.askopenfilename(
             title="Select Excel Template", filetypes=[("Excel Files", "*.xlsx *.xlsm")]
         )
@@ -320,7 +319,7 @@ class KyoQAToolApp(tk.Tk):
     def _harvest_worker(self, pdf):
         try:
             self.status_current_file.set(f"Harvesting {pdf.name}...")
-            text = extract_text_from_pdf(str(pdf.resolve()))
+            text, _ = extract_text_from_pdf(str(pdf.resolve()))
             data = harvest_all_data(text, pdf.name)
             self.harvest_results = [{"filename": pdf.name, **data}]
             result_text = f"Models: {data.get('models')}\nAuthor: {data.get('author')}"
@@ -354,7 +353,6 @@ class KyoQAToolApp(tk.Tk):
 
     def manual_export(self):
         """Export cached JSON results to an Excel file."""
-        # TODO: add option to choose output filename/location
         excel_path = self.selected_excel.get()
         if not excel_path:
             messagebox.showwarning(
@@ -372,25 +370,36 @@ class KyoQAToolApp(tk.Tk):
             try:
                 with open(jf, "r", encoding="utf-8") as f:
                     results.append(json.load(f))
-            except Exception as e:  # pragma: no cover - just log
+            except Exception as e:
                 logger.error(f"Failed loading {jf}: {e}")
 
         try:
+            # MODIFIED: This section is completely rewritten for correctness
             import processing_engine as pe
+            from app_state import AppState
+            
+            # The manual export function needs its own AppState object
+            # to communicate with the export helper function.
+            app_state = AppState(
+                progress_queue=self.response_queue,
+                cancel_event=threading.Event(),
+                pause_event=threading.Event(),
+            )
 
-            result = pe.export_to_excel(results, Path(excel_path), self.response_queue)
-            if isinstance(result, tuple):
-                output, skipped = result
-            else:
-                output, skipped = result, None
-            if output:
-                msg = f"Results exported to:\n{output}"
+            output_path, skipped = pe.export_to_excel(
+                results, Path(excel_path), app_state
+            )
+            
+            if output_path:
+                msg = f"Results exported to:\n{output_path}"
                 if skipped:
                     msg += f"\nSkipped: {', '.join(skipped)}"
-                messagebox.showinfo("Export Complete", msg)
+                
+                if messagebox.askyesno("Export Complete", f"{msg}\n\nDo you want to open the file now?"):
+                    open_file_in_default_app(str(output_path))
             else:
-                messagebox.showerror("Export Failed", "Failed to export to Excel.")
-        except Exception as e:  # pragma: no cover - just log
+                messagebox.showerror("Export Failed", "Failed to create the Excel file.")
+        except Exception as e:
             logger.error(f"Manual export failed: {e}", exc_info=True)
             messagebox.showerror("Export Error", str(e))
 

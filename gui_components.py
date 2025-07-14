@@ -417,8 +417,13 @@ def create_review_tab(parent, app):
     app.review_table.heading("file", text="File Name")
     app.review_table.heading("status", text="Status")
     app.review_table.pack(fill="both", expand=True)
-    app.review_table.tag_configure("review", style="ReviewRow")
-    app.review_table.tag_configure("fail", style="FailRow")
+    
+    # --- FIXED ---
+    # The 'style' option is not valid for tag_configure.
+    # Instead, we directly configure the background and foreground colors.
+    app.review_table.tag_configure("review", background=KyoceraColors.STATUS_WARNING)
+    app.review_table.tag_configure("fail", background=KyoceraColors.STATUS_ERROR, foreground="white")
+    # --- END FIX ---
 
     app.empty_label = ttk.Label(
         review_frame,

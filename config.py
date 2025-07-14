@@ -1,88 +1,52 @@
 # config.py
-# Version: __version__
-# Last modified: 2025-07-06
+# Version: 2.1.0
+# Last modified: 2025-07-13
 
 import json
-import os
 import logging
 from pathlib import Path
 
-from branding import KyoceraColors
-from version import __version__
+logger = logging.getLogger(__name__)
 
-logger = logging.getLogger("config")
-logger.setLevel(logging.DEBUG)
+# --- Core Application Paths ---
+# Use Path(__file__).resolve().parent to get the directory of the current script.
+# This makes the paths relative to the application's location, ensuring it works anywhere.
+APP_ROOT = Path(__file__).resolve().parent
 
-# --- Directory Constants ---
-BASE_DIR = Path(__file__).parent
-OUTPUT_DIR = BASE_DIR / 'output'
-LOGS_DIR = BASE_DIR / 'logs'
-ASSETS_DIR = BASE_DIR / 'assets'
-PDF_TXT_DIR = OUTPUT_DIR / 'pdf_texts'
-CACHE_DIR = BASE_DIR / 'cache'
-NEED_REVIEW_DIR = OUTPUT_DIR
-CONFIG_FILE = BASE_DIR / 'config.json'
+# Define the directories for temporary files, cache, and output
+TEMP_DIR = APP_ROOT / "temp"
+CACHE_DIR = APP_ROOT / "cache"
+OUTPUT_DIR = APP_ROOT / "output"
 
-# --- GUI and App Color Configuration ---
-BRAND_COLORS = {
-    "background": KyoceraColors.BACKGROUND_MAIN,
-    "widget_bg": KyoceraColors.BACKGROUND_WIDGET,
-    "header_bg": KyoceraColors.KYOCERA_BLACK,
-    "primary_text": KyoceraColors.TEXT_PRIMARY,
-    "secondary_text": KyoceraColors.TEXT_SECONDARY,
-    "kyocera_red": KyoceraColors.KYOCERA_RED,
-    "primary_blue": KyoceraColors.PRIMARY_BLUE,
-    "status_success": KyoceraColors.STATUS_SUCCESS,
-    "status_warning": KyoceraColors.STATUS_WARNING,
-    "status_error": KyoceraColors.STATUS_ERROR,
-    "status_info": KyoceraColors.STATUS_INFO,
-}
+# --- Tesseract OCR Configuration ---
+# Path to the Tesseract executable.
+# This needs to be configured by the user if it's not in the system's PATH.
+TESSERACT_CMD = "tesseract"
 
-# --- Column Names for Excel Processing ---
-STATUS_COLUMN_NAME = "Validation Status"
-DESCRIPTION_COLUMN_NAME = "description"
-META_COLUMN_NAME = "meta"
-AUTHOR_COLUMN_NAME = "author"
-QA_NUMBERS_COLUMN_NAME = "QA Numbers"
-
-
-# --- Functions for GUI Configuration ---
-DEFAULT_CONFIG = {
-    'input_dir': '',
-    'output_dir': str(OUTPUT_DIR.absolute()), # Store as string in JSON
-}
-
-def load_config():
+# --- Function to load settings from config.json ---
+def load_settings():
     """
-    Loads the configuration from config.json.
-    If the file doesn't exist, it creates a default one.
+    Loads settings from the config.json file.
+    Returns a dictionary with the settings, or a default dictionary on error.
     """
-    if not os.path.exists(CONFIG_FILE):
-        logger.info(f"Config file not found. Creating default config at {CONFIG_FILE}")
-        save_config(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG
     try:
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-            logger.info(f"Configuration loaded from {CONFIG_FILE}")
-            return config
+        config_path = APP_ROOT / "config.json"
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+                logger.info("Configuration loaded from config.json")
+                return settings
+        else:
+            logger.warning("config.json not found. Using default settings.")
+            return {}
     except (json.JSONDecodeError, IOError) as e:
-        logger.error(f"Error loading config file: {e}. Using default config.")
-        return DEFAULT_CONFIG
+        logger.error(f"Error loading config.json: {e}")
+        return {}
 
-def save_config(config_data):
-    """
-    Saves the given configuration data to config.json.
-    """
-    try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config_data, f, indent=4)
-            logger.info(f"Configuration saved to {CONFIG_FILE}")
-    except IOError as e:
-        logger.error(f"Error saving config file: {e}")
+# --- Load settings on startup ---
+SETTINGS = load_settings()
 
-def get_app_version():
-    """
-    Returns the application version from the version.py file.
-    """
-    return __version__
+# --- API Configuration (Example) ---
+# You can retrieve API keys or other settings like this:
+API_KEY = SETTINGS.get("api_key", "default_api_key_if_not_found")
+

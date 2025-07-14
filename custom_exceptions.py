@@ -1,19 +1,19 @@
-# custom_exceptions.py - Custom exception classes for KYO QA Tool
+# custom_exceptions.py
+# Version: 1.0.1
+# Last modified: 2025-07-13
 
-from utils import (
-    KYOQAToolError,
-    FileLockError,
-    ExcelGenerationError,
-    PDFExtractionError,
-    PatternMatchError,
-    ConfigurationError,
-)
+"""
+Custom exception classes for the application.
+"""
 
-__all__ = [
-    "KYOQAToolError",
-    "FileLockError",
-    "ExcelGenerationError",
-    "PDFExtractionError",
-    "PatternMatchError",
-    "ConfigurationError",
-]
+class ProcessingError(Exception):
+    """Custom exception for errors during the file processing workflow."""
+    pass
+
+class APIError(Exception):
+    """Custom exception for errors related to external API calls."""
+    pass
+
+class ConfigurationError(Exception):
+    """Custom exception for configuration-related errors."""
+    pass

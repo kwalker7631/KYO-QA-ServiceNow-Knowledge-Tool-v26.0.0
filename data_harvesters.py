@@ -1,152 +1,70 @@
 # data_harvesters.py
+# Version: 2.5.0
+# Last modified: 2025-07-13
+
 import re
-import importlib
 import logging
+from typing import List, Dict, Any, Optional
 
-# Logging configuration should be done in the main entry point of the application.
-logger = logging.getLogger("harvesters")
+from custom_patterns import get_patterns
 
-# --- Default Patterns (Single Source of Truth) ---
-DEFAULT_MODEL_PATTERNS = [
-    r"\b(TASKalfa|ECOSYS)\s*[\w-]+\b",
-    r"\b(PF|DF|MK|AK|DP|BF|JS)-\d+[\w-]*\b",
-    r"\bFS-C?\d+[a-zA-Z]*\b",
-    r"\bKM-\d+[a-zA-Z]*\b",
-    r"\bCS\s\d+[a-zA-Z]*\b",
-]
-DEFAULT_QA_PATTERNS = [r"\bQA[-_]?\d+[\w-]*\b", r"\bSB[-_]?\d+[\w-]*\b"]
-EXCLUSION_PATTERNS = ["CVE-", "CWE-", "TK-"]
-UNWANTED_AUTHORS = ["Knowledge Import", "System Administrator"]
-STANDARDIZATION_RULES = {"TASKalfa-": "TASKalfa ", "ECOSYS-": "ECOSYS "}
+logger = logging.getLogger(__name__)
 
-
-def get_combined_patterns(pattern_name: str, default_patterns: list) -> list:
-    """
-    Safely loads custom patterns and combines them with defaults.
-    """
-    all_patterns = default_patterns[:]
-    try:
-        custom_patterns_module = importlib.import_module("custom_patterns")
-        custom_patterns_list = getattr(custom_patterns_module, pattern_name, [])
-        if custom_patterns_list:
-            all_patterns.extend(
-                [p for p in custom_patterns_list if p not in all_patterns]
-            )
-            logger.info(
-                f"Successfully loaded {len(custom_patterns_list)} custom patterns for '{pattern_name}'."
-            )
-    except ImportError:
-        # This is not an error, just means no custom patterns are present.
-        logger.info("No 'custom_patterns.py' file found. Using default patterns only.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred while loading custom patterns: {e}")
-
-    return all_patterns
-
-
-# --- Harvester Functions ---
-
-
-def harvest_models(text: str, filename: str) -> list:
-    """Extracts model numbers using combined default and custom patterns."""
-    if not text:
+def _harvest_from_patterns(text: str, pattern_name: str) -> List[str]:
+    """Generic helper to find all matches for a given pattern name."""
+    patterns = get_patterns(pattern_name)
+    if not patterns:
+        logger.warning(f"No patterns found for '{pattern_name}'.")
         return []
-
-    model_patterns = get_combined_patterns("MODEL_PATTERNS", DEFAULT_MODEL_PATTERNS)
-    all_search_patterns = model_patterns
-
-    found = set()
-    for pattern in all_search_patterns:
+    
+    all_matches = set()
+    for pattern in patterns:
         try:
             matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches:
-                # Exclude matches containing exclusion patterns
-                if not any(ex in match for ex in EXCLUSION_PATTERNS):
-                    found.add(match.strip())
+            if matches and isinstance(matches[0], tuple):
+                for match_tuple in matches:
+                    for group in match_tuple:
+                        if group:
+                            all_matches.add(group.strip())
+            else:
+                for match in matches:
+                    all_matches.add(match.strip())
         except re.error as e:
-            logger.warning(f"Invalid regex pattern skipped: '{pattern}'. Error: {e}")
+            logger.error(f"Regex error for pattern '{pattern}' in '{pattern_name}': {e}")
+            
+    return sorted(list(all_matches))
 
-    # Standardize results
-    standardized_found = set()
-    for item in found:
-        for key, value in STANDARDIZATION_RULES.items():
-            item = item.replace(key, value)
-        standardized_found.add(item)
+def harvest_models(text: str) -> List[str]:
+    """Harvests device model numbers from the text."""
+    return _harvest_from_patterns(text, "MODEL_PATTERNS")
 
-    return sorted(list(standardized_found))
+def harvest_qa_number(text: str) -> Optional[str]:
+    """Harvests the primary QA number from the text."""
+    matches = _harvest_from_patterns(text, "QA_NUMBER_PATTERNS")
+    return matches[0] if matches else None
 
+def harvest_author(text: str) -> Optional[str]:
+    """Harvests the author's name from the text."""
+    match = re.search(r"Author:\s*(.*)", text, re.IGNORECASE)
+    return match.group(1).strip() if match else "Unknown"
 
-def harvest_author(text: str) -> str:
-    """Finds the author and returns an empty string if it's an unwanted name."""
-    if not text:
-        return ""
+def harvest_all_data(text: str, filename: str) -> Dict[str, Any]:
+    """
+    Runs all data harvesters and returns a structured dictionary.
+    Device models are placed in a nested 'meta' dictionary.
+    """
+    models = harvest_models(text)
+    qa_number = harvest_qa_number(text)
+    author = harvest_author(text)
 
-    author_patterns = [
-        r"Author:\s*(.*?)(?:\n|$)",
-        r"Created by:\s*(.*?)(?:\n|$)",
-        r"Written by:\s*(.*?)(?:\n|$)",
-    ]
-
-    for pattern in author_patterns:
-        try:
-            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                author = match.group(1).strip()
-                if author and author not in UNWANTED_AUTHORS:
-                    return author
-        except Exception as e:
-            logger.error(f"Error extracting author with pattern {pattern}: {e}")
-
-    return ""
-
-def harvest_qa_numbers(text: str) -> list:
-    """Extracts QA numbers using only QA_NUMBER_PATTERNS."""
-    if not text:
-        return []
-
-    qa_patterns = get_combined_patterns("QA_NUMBER_PATTERNS", DEFAULT_QA_PATTERNS)
-
-    found = set()
-    for pattern in qa_patterns:
-        try:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for match in matches:
-                if not any(ex in match for ex in EXCLUSION_PATTERNS):
-                    found.add(match.strip())
-        except re.error as e:
-            logger.warning(
-                f"Invalid regex pattern skipped: '{pattern}'. Error: {e}"
-            )
-
-    standardized_found = set()
-    for item in found:
-        for key, value in STANDARDIZATION_RULES.items():
-            item = item.replace(key, value)
-        standardized_found.add(item)
-
-    return sorted(list(standardized_found))
-
-
-def harvest_all_data(text: str, filename: str) -> dict:
-    """The main harvester function that aggregates all data."""
-    if not text and not filename:
-        logger.warning("No text or filename provided for data harvesting")
-        return {"models": "Not Found", "qa_numbers": "", "author": ""}
-
-    try:
-        models = harvest_models(text, filename)
-        qa_numbers = harvest_qa_numbers(text)
-        models_str = ", ".join(models) if models else "Not Found"
-        qa_numbers_str = ", ".join(qa_numbers) if qa_numbers else ""
-        author_str = harvest_author(text)
-
-        return {
-            "models": models_str,
-            "qa_numbers": qa_numbers_str,
-            "author": author_str,
-        }
-    except Exception as e:
-        logger.error(
-            f"Critical error during data harvesting for {filename}: {e}", exc_info=True
-        )
-        return {"models": "Error: Harvesting Failed", "qa_numbers": "", "author": ""}
+    # This structure places the models inside a 'meta' field as requested.
+    data = {
+        "filename": filename,
+        "qa_number": qa_number,
+        "author": author,
+        "meta": {
+            "models": models,
+        },
+    }
+    logger.info(f"Harvested data for {filename}: QA={qa_number}, Models={len(models)}")
+    return data
