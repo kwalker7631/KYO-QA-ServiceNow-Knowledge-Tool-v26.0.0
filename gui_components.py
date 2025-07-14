@@ -1,978 +1,660 @@
-# gui_components.py - Fixed version with proper error handling and missing argument handling
+# gui_components.py
 import tkinter as tk
 from tkinter import ttk
 
-def create_main_header(parent, version, colors=None):
-    """Create the main application header"""
-    try:
-        # Default colors if not provided
-        if colors is None:
-            colors = {
-                "kyocera_red": "#DA291C",
-                "frame_background": "#FFFFFF"
-            }
-        
-        header = ttk.Frame(parent, style="Header.TFrame", padding=(10, 10))
-        header.grid(row=0, column=0, sticky="ew")
-        
-        # Add separator
-        ttk.Separator(header, orient='horizontal').pack(side="bottom", fill="x")
-        
-        # KYOCERA branding
-        ttk.Label(header, text="KYOCERA", 
-                 foreground=colors.get("kyocera_red", "#DA291C"), 
-                 font=("Arial Black", 22)).pack(side=tk.LEFT, padx=(10, 0))
-        
-        # Tool title
-        ttk.Label(header, text=f"QA Knowledge Tool v{version}", 
-                 font=("Segoe UI", 16, "bold")).pack(side=tk.LEFT, padx=(15, 0))
-                 
-    except Exception as e:
-        print(f"Error creating header: {e}")
-        # Fallback simple header
-        simple_header = ttk.Frame(parent, padding=10)
-        simple_header.grid(row=0, column=0, sticky="ew")
-        ttk.Label(simple_header, text=f"KYO QA Tool v{version}", 
-                 font=("Arial", 16, "bold")).pack()
-
-# === AUTO-GENERATED MISSING FUNCTIONS ===
-# Functions that might be called by the main application but were missing
-
-def create_controls_section(parent, app):
-    """Alias for create_process_controls for backward compatibility."""
-    return create_process_controls(parent, app)
-
-def create_main_controls(parent, app):
-    """Alternative alias for create_process_controls."""
-    return create_process_controls(parent, app)
-
-def create_status_section(parent, app):
-    """Alias for create_status_and_log_section for backward compatibility."""
-    return create_status_and_log_section(parent, app)
-
-def create_log_section(parent, app):
-    """Alternative alias for log section."""
-    return create_status_and_log_section(parent, app)
-
-def create_input_section(parent, app):
-    """Alias for create_io_section for backward compatibility.""" 
-    return create_io_section(parent, app)
-
-def create_file_section(parent, app):
-    """Alternative alias for file selection section."""
-    return create_io_section(parent, app)
-
-def setup_main_layout(parent, app, version, colors=None):
-    """Create complete main layout - alternative entry point."""
-    try:
-        # Default colors if not provided
-        if colors is None:
-            from config import BRAND_COLORS
-            colors = BRAND_COLORS
-        
-        # Configure parent grid
-        parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(1, weight=1)
-        
-        # Create all sections
-        create_main_header(parent, version, colors)
-        
-        main_frame = ttk.Frame(parent, padding=20)
-        main_frame.grid(row=1, column=0, sticky="nsew")
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-        
-        create_io_section(main_frame, app)
-        create_process_controls(main_frame, app)  
-        create_status_and_log_section(main_frame, app)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error setting up main layout: {e}")
-        return False
-
-def create_header_section(parent, version, colors=None):
-    """Alias for create_main_header."""
-    return create_main_header(parent, version, colors)
-
-def setup_high_contrast_styles(*args, **kwargs):
-    """Placeholder for high contrast styles setup."""
-    print("High contrast styles setup called")
-    return None
+def create_main_header(parent, version, colors):
+    header = ttk.Frame(parent, style="Header.TFrame", padding=(10, 10))
+    header.grid(row=0, column=0, sticky="ew")
+    ttk.Separator(header, orient='horizontal').pack(side="bottom", fill="x")
+    ttk.Label(header, text="KYOCERA", foreground=colors["kyocera_red"], font=("Arial Black", 22)).pack(side=tk.LEFT, padx=(10, 0))
+    ttk.Label(header, text=f"QA Knowledge Tool v{version}", font=("Segoe UI", 16, "bold")).pack(side=tk.LEFT, padx=(15, 0))
 
 def create_io_section(parent, app):
-    """Create the input/output file selection section"""
-    try:
-        io = ttk.LabelFrame(parent, text="1. Select Inputs", padding=10)
-        io.grid(row=0, column=0, sticky="ew", pady=5)
-        io.columnconfigure(1, weight=1)
+    io = ttk.LabelFrame(parent, text="1. Select Inputs", padding=10)
+    io.grid(row=0, column=0, sticky="ew", pady=5)
+    io.columnconfigure(1, weight=1)
 
-        # Excel file selection
-        ttk.Label(io, text="Excel to Clone:").grid(row=0, column=0, sticky="w", pady=2, padx=5)
-        
-        # Check if app has the required attribute
-        if hasattr(app, 'selected_excel'):
-            ttk.Entry(io, textvariable=app.selected_excel).grid(row=0, column=1, sticky="ew", padx=5)
-        else:
-            # Create a placeholder if the attribute doesn't exist
-            app.selected_excel = tk.StringVar()
-            ttk.Entry(io, textvariable=app.selected_excel).grid(row=0, column=1, sticky="ew", padx=5)
-        
-        excel_btn = ttk.Button(io, text=" Browse...", command=getattr(app, 'browse_excel', lambda: print("Browse Excel not implemented")))
-        if hasattr(app, 'browse_icon') and app.browse_icon:
-            excel_btn.config(image=app.browse_icon, compound="left")
-        excel_btn.grid(row=0, column=2, padx=5)
+    ttk.Label(io, text="Excel to Clone:").grid(row=0, column=0, sticky="w", pady=2, padx=5)
+    ttk.Entry(io, textvariable=app.selected_excel).grid(row=0, column=1, sticky="ew", padx=5)
+    ttk.Button(io, image=app.browse_icon, text=" Browse...", compound="left", command=app.browse_excel).grid(row=0, column=2, padx=5)
 
-        # PDF folder selection
-        ttk.Label(io, text="PDFs Folder:").grid(row=1, column=0, sticky="w", pady=2, padx=5)
-        
-        if hasattr(app, 'selected_folder'):
-            ttk.Entry(io, textvariable=app.selected_folder).grid(row=1, column=1, sticky="ew", padx=5)
-        else:
-            app.selected_folder = tk.StringVar()
-            ttk.Entry(io, textvariable=app.selected_folder).grid(row=1, column=1, sticky="ew", padx=5)
-        
-        folder_btn = ttk.Button(io, text=" Browse...", command=getattr(app, 'browse_folder', lambda: print("Browse Folder not implemented")))
-        if hasattr(app, 'browse_icon') and app.browse_icon:
-            folder_btn.config(image=app.browse_icon, compound="left")
-        folder_btn.grid(row=1, column=2, padx=5)
+    ttk.Label(io, text="PDFs Folder:").grid(row=1, column=0, sticky="w", pady=2, padx=5)
+    ttk.Entry(io, textvariable=app.selected_folder).grid(row=1, column=1, sticky="ew", padx=5)
+    ttk.Button(io, image=app.browse_icon, text=" Browse...", compound="left", command=app.browse_folder).grid(row=1, column=2, padx=5)
 
-        # Individual files selection
-        app.files_label = ttk.Label(io, text="Or select individual files -->")
-        app.files_label.grid(row=2, column=1, sticky="e", padx=5, pady=(5,0))
-        
-        files_btn = ttk.Button(io, text=" Browse Files...", command=getattr(app, 'browse_files', lambda: print("Browse Files not implemented")))
-        if hasattr(app, 'browse_icon') and app.browse_icon:
-            files_btn.config(image=app.browse_icon, compound="left")
-        files_btn.grid(row=2, column=2, padx=5, pady=(5,0))
-        
-    except Exception as e:
-        print(f"Error creating IO section: {e}")
-        # Create a basic fallback
-        fallback = ttk.LabelFrame(parent, text="File Selection", padding=10)
-        fallback.grid(row=0, column=0, sticky="ew", pady=5)
-        ttk.Label(fallback, text="File selection interface failed to load").pack()
+    app.files_label = ttk.Label(io, text="Or select individual files -->")
+    app.files_label.grid(row=2, column=1, sticky="e", padx=5, pady=(5,0))
+    ttk.Button(io, image=app.browse_icon, text=" Browse Files...", compound="left", command=app.browse_files).grid(row=2, column=2, padx=5, pady=(5,0))
 
 def create_process_controls(parent, app):
-    """Create the processing control buttons section"""
-    try:
-        ctrl = ttk.LabelFrame(parent, text="2. Process & Manage", padding=10)
-        ctrl.grid(row=1, column=0, sticky="ew", pady=5)
-        
-        # Configure grid to have 4 equal columns
-        for i in range(4):
-            ctrl.columnconfigure(i, weight=1)
+    ctrl = ttk.LabelFrame(parent, text="2. Process & Manage", padding=10)
+    ctrl.grid(row=1, column=0, sticky="ew", pady=5)
+    # --- FIX: Reconfigured the grid to have 4 columns ---
+    ctrl.columnconfigure((0, 1, 2, 3), weight=1)
 
-        # Main START button - spans all columns
-        app.process_btn = ttk.Button(ctrl, text=" START", 
-                                   command=getattr(app, 'start_processing', lambda: print("Start processing not implemented")), 
-                                   style="Red.TButton")
-        if hasattr(app, 'start_icon') and app.start_icon:
-            app.process_btn.config(image=app.start_icon, compound="left")
-        app.process_btn.grid(row=0, column=0, columnspan=4, sticky="ew", pady=2, padx=2)
+    app.process_btn = ttk.Button(ctrl, text=" START", image=app.start_icon, compound="left", command=app.start_processing, style="Red.TButton")
+    app.process_btn.grid(row=0, column=0, columnspan=4, sticky="ew", pady=2)
 
-        # Second row - control buttons
-        app.pause_btn = ttk.Button(ctrl, text=" Pause", 
-                                 command=getattr(app, 'toggle_pause', lambda: print("Pause not implemented")), 
-                                 state=tk.DISABLED)
-        if hasattr(app, 'pause_icon') and app.pause_icon:
-            app.pause_btn.config(image=app.pause_icon, compound="left")
-        app.pause_btn.grid(row=1, column=0, sticky="ew", pady=2, padx=2)
+    app.pause_btn = ttk.Button(ctrl, text=" Pause", image=app.pause_icon, compound="left", command=app.toggle_pause, state=tk.DISABLED)
+    app.pause_btn.grid(row=1, column=0, sticky="ew", pady=2)
+    app.stop_btn = ttk.Button(ctrl, text=" Stop", image=app.stop_icon, compound="left", command=app.stop_processing, state=tk.DISABLED)
+    app.stop_btn.grid(row=1, column=1, sticky="ew", pady=2)
+    app.rerun_btn = ttk.Button(ctrl, text=" Re-run Flagged", image=app.rerun_icon, compound="left", command=app.rerun_flagged_job, state=tk.DISABLED)
+    app.rerun_btn.grid(row=1, column=2, sticky="ew", pady=2)
+    app.open_result_btn = ttk.Button(ctrl, text=" Open Result", image=app.open_icon, compound="left", command=app.open_result, state=tk.DISABLED)
+    app.open_result_btn.grid(row=1, column=3, sticky="ew", pady=2)
+    
+    # --- FIX: Placed each button in its own grid cell for proper layout ---
+    app.review_btn = ttk.Button(ctrl, text=" Patterns", image=app.patterns_icon, compound="left", command=app.open_pattern_manager)
+    app.review_btn.grid(row=2, column=0, sticky="ew", pady=2)
+    
+    app.fullscreen_btn = ttk.Button(ctrl, text=" Fullscreen", image=app.fullscreen_icon, compound="left", command=app.toggle_fullscreen)
+    app.fullscreen_btn.grid(row=2, column=1, sticky="ew", pady=2)
+    
+    app.exit_btn = ttk.Button(ctrl, text=" Exit", image=app.exit_icon, compound="left", command=app.on_closing)
+    app.exit_btn.grid(row=2, column=3, sticky="ew", pady=2)
 
-        app.stop_btn = ttk.Button(ctrl, text=" Stop", 
-                                command=getattr(app, 'stop_processing', lambda: print("Stop not implemented")), 
-                                state=tk.DISABLED)
-        if hasattr(app, 'stop_icon') and app.stop_icon:
-            app.stop_btn.config(image=app.stop_icon, compound="left")
-        app.stop_btn.grid(row=1, column=1, sticky="ew", pady=2, padx=2)
-
-        app.rerun_btn = ttk.Button(ctrl, text=" Re-run Flagged", 
-                                 command=getattr(app, 'rerun_flagged_job', lambda: print("Rerun not implemented")), 
-                                 state=tk.DISABLED)
-        if hasattr(app, 'rerun_icon') and app.rerun_icon:
-            app.rerun_btn.config(image=app.rerun_icon, compound="left")
-        app.rerun_btn.grid(row=1, column=2, sticky="ew", pady=2, padx=2)
-
-        app.open_result_btn = ttk.Button(ctrl, text=" Open Result", 
-                                       command=getattr(app, 'open_result', lambda: print("Open result not implemented")), 
-                                       state=tk.DISABLED)
-        if hasattr(app, 'open_icon') and app.open_icon:
-            app.open_result_btn.config(image=app.open_icon, compound="left")
-        app.open_result_btn.grid(row=1, column=3, sticky="ew", pady=2, padx=2)
-
-        # Third row - utility buttons
-        app.review_btn = ttk.Button(ctrl, text=" Patterns", 
-                                  command=getattr(app, 'open_pattern_manager', lambda: print("Pattern manager not implemented")))
-        if hasattr(app, 'patterns_icon') and app.patterns_icon:
-            app.review_btn.config(image=app.patterns_icon, compound="left")
-        app.review_btn.grid(row=2, column=0, sticky="ew", pady=2, padx=2)
-
-        # Create fullscreen button if method exists
-        if hasattr(app, 'toggle_fullscreen'):
-            app.fullscreen_btn = ttk.Button(ctrl, text=" Fullscreen", command=app.toggle_fullscreen)
-            if hasattr(app, 'fullscreen_icon') and app.fullscreen_icon:
-                app.fullscreen_btn.config(image=app.fullscreen_icon, compound="left")
-            app.fullscreen_btn.grid(row=2, column=1, sticky="ew", pady=2, padx=2)
-
-        # Exit button - always in the rightmost position
-        app.exit_btn = ttk.Button(ctrl, text=" Exit", 
-                                command=getattr(app, 'on_closing', lambda: print("Exit not implemented")))
-        if hasattr(app, 'exit_icon') and app.exit_icon:
-            app.exit_btn.config(image=app.exit_icon, compound="left")
-        app.exit_btn.grid(row=2, column=3, sticky="ew", pady=2, padx=2)
-        
-    except Exception as e:
-        print(f"Error creating process controls: {e}")
-        # Create a basic fallback
-        fallback = ttk.LabelFrame(parent, text="Controls", padding=10)
-        fallback.grid(row=1, column=0, sticky="ew", pady=5)
-        ttk.Button(fallback, text="START", command=lambda: print("Basic start button")).pack(pady=5)
-
-def create_status_and_log_section(parent, app):
-    """Create the status display and logging section"""
-    try:
-        stat = ttk.LabelFrame(parent, text="3. Status & Logs", padding=10)
-        stat.grid(row=2, column=0, sticky="nsew", pady=5)
-        stat.columnconfigure(0, weight=1)
-        stat.rowconfigure(5, weight=1)  # Make log area expandable
-
-        # Status indicator
-        app.status_frame = ttk.Frame(stat, style="Status.TFrame", padding=5)
-        app.status_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=2)
-        app.status_frame.columnconfigure(1, weight=1)
-        
-        # Initialize variables if they don't exist
-        if not hasattr(app, 'led_status_var'):
-            app.led_status_var = tk.StringVar(value="●")
-        if not hasattr(app, 'status_current_file'):
-            app.status_current_file = tk.StringVar(value="Ready")
-        
-        app.led_label = ttk.Label(app.status_frame, textvariable=app.led_status_var, style="LED.TLabel")
-        app.led_label.grid(row=0, column=0, sticky="w")
-        
-        ttk.Label(app.status_frame, textvariable=app.status_current_file, style="Status.TLabel").grid(row=0, column=1, sticky="ew", padx=5)
-
-        # Progress bar
-        prog_frame = ttk.Frame(stat)
-        prog_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,10))
-        prog_frame.columnconfigure(0, weight=1)
-        
-        if not hasattr(app, 'progress_value'):
-            app.progress_value = tk.DoubleVar(value=0)
-        if not hasattr(app, 'time_remaining_var'):
-            app.time_remaining_var = tk.StringVar(value="")
-        
-        app.progress_bar = ttk.Progressbar(prog_frame, variable=app.progress_value, style="Blue.Horizontal.TProgressbar")
-        app.progress_bar.grid(row=0, column=0, sticky="ew")
-        
-        ttk.Label(prog_frame, textvariable=app.time_remaining_var).grid(row=0, column=1, sticky="e", padx=10)
-
-        # Summary counters
-        sum_frame = ttk.Frame(stat)
-        sum_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=2)
-        
-        # Initialize counter variables if they don't exist
-        for counter in ['count_pass', 'count_fail', 'count_review', 'count_ocr']:
-            if not hasattr(app, counter):
-                setattr(app, counter, tk.IntVar(value=0))
-        
-        counters = [
-            ("Pass:", app.count_pass, "Green"), 
-            ("Fail:", app.count_fail, "Red"), 
-            ("Review:", app.count_review, "Orange"), 
-            ("OCR:", app.count_ocr, "Blue")
-        ]
-        
-        for i, (text, var, color) in enumerate(counters):
-            ttk.Label(sum_frame, text=text, style="Status.Header.TLabel").pack(side="left", padx=(15, 2))
-            ttk.Label(sum_frame, textvariable=var, style=f"Count.{color}.TLabel").pack(side="left")
-
-        # Review files section
-        rev_frame = ttk.Frame(stat)
-        rev_frame.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
-        rev_frame.rowconfigure(1, weight=1)
-        rev_frame.columnconfigure(0, weight=1)
-        
-        ttk.Label(rev_frame, text="Files to Review:", style="Status.Header.TLabel").grid(row=0, column=0, sticky="w")
-        
-        app.review_file_btn = ttk.Button(rev_frame, text="Review Selected", 
-                                        command=getattr(app, 'open_review_for_selected_file', lambda: print("Review not implemented")), 
-                                        state=tk.DISABLED)
-        app.review_file_btn.grid(row=0, column=1, sticky="e")
-        
-        app.review_tree = ttk.Treeview(rev_frame, columns=('file',), show='headings', height=4)
-        app.review_tree.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=2)
-        app.review_tree.heading('file', text='File Name')
-        
-        # Bind selection event
-        app.review_tree.bind("<<TreeviewSelect>>", 
-                           lambda e: app.review_file_btn.config(state=tk.NORMAL if app.review_tree.selection() else tk.DISABLED))
-
-        # Add scrollbar to review tree
-        rev_scroll = ttk.Scrollbar(rev_frame, orient="vertical", command=app.review_tree.yview)
-        rev_scroll.grid(row=1, column=2, sticky="ns", pady=2)
-        app.review_tree.configure(yscrollcommand=rev_scroll.set)
-
-        # Log display area
-        log_frame = ttk.Frame(stat)
-        log_frame.grid(row=5, column=0, sticky="nsew", padx=5, pady=(10,2))
-        log_frame.rowconfigure(0, weight=1)
-        log_frame.columnconfigure(0, weight=1)
-        
-        app.log_text = tk.Text(log_frame, height=8, wrap=tk.WORD, state=tk.DISABLED, 
-                              relief="solid", borderwidth=1, font=("Consolas", 9))
-        app.log_text.grid(row=0, column=0, sticky="nsew")
-        
-        log_scroll = ttk.Scrollbar(log_frame, command=app.log_text.yview)
-        log_scroll.grid(row=0, column=1, sticky="ns")
-        app.log_text.config(yscrollcommand=log_scroll.set)
-        
-    except Exception as e:
-        print(f"Error creating status and log section: {e}")
-        # Create a basic fallback
-        fallback = ttk.LabelFrame(parent, text="Status", padding=10)
-        fallback.grid(row=2, column=0, sticky="nsew", pady=5)
-        fallback.rowconfigure(1, weight=1)
-        fallback.columnconfigure(0, weight=1)
-        
-        # Basic status display
-        if not hasattr(app, 'status_current_file'):
-            app.status_current_file = tk.StringVar(value="Ready")
-        ttk.Label(fallback, textvariable=app.status_current_file).grid(row=0, column=0, sticky="w")
-        
-        # Basic log area
-        app.log_text = tk.Text(fallback, height=10, wrap=tk.WORD, state=tk.DISABLED)
-        app.log_text.grid(row=1, column=0, sticky="nsew")
-        
-        # Initialize missing attributes for compatibility
-        app.review_tree = None
-        app.review_file_btn = None
-        if not hasattr(app, 'progress_value'):
-            app.progress_value = tk.DoubleVar(value=0)
-
-def create_minimal_gui(parent, app):
-    """Create a minimal GUI fallback if the main components fail"""
-    try:
-        main_frame = ttk.Frame(parent, padding=20)
-        main_frame.pack(fill="both", expand=True)
-        
-        # Title
-        ttk.Label(main_frame, text="KYO QA Tool - Minimal Interface", 
-                 font=("Arial", 16, "bold")).pack(pady=10)
-        
-        # File selection
-        file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding=10)
-        file_frame.pack(fill="x", pady=5)
-        
-        ttk.Label(file_frame, text="Excel File:").pack(anchor="w")
-        excel_frame = ttk.Frame(file_frame)
-        excel_frame.pack(fill="x", pady=2)
-        ttk.Entry(excel_frame, textvariable=app.selected_excel).pack(side="left", fill="x", expand=True)
-        ttk.Button(excel_frame, text="Browse", command=app.browse_excel).pack(side="right", padx=(5,0))
-        
-        ttk.Label(file_frame, text="PDF Folder:").pack(anchor="w", pady=(10,0))
-        folder_frame = ttk.Frame(file_frame)
-        folder_frame.pack(fill="x", pady=2)
-        ttk.Entry(folder_frame, textvariable=app.selected_folder).pack(side="left", fill="x", expand=True)
-        ttk.Button(folder_frame, text="Browse", command=app.browse_folder).pack(side="right", padx=(5,0))
-        
-        # Controls
-        control_frame = ttk.LabelFrame(main_frame, text="Controls", padding=10)
-        control_frame.pack(fill="x", pady=5)
-        
-        button_frame = ttk.Frame(control_frame)
-        button_frame.pack()
-        
-        app.process_btn = ttk.Button(button_frame, text="START", command=app.start_processing)
-        app.process_btn.pack(side="left", padx=5)
-        
-        app.pause_btn = ttk.Button(button_frame, text="Pause", command=app.toggle_pause, state=tk.DISABLED)
-        app.pause_btn.pack(side="left", padx=5)
-        
-        app.stop_btn = ttk.Button(button_frame, text="Stop", command=app.stop_processing, state=tk.DISABLED)
-        app.stop_btn.pack(side="left", padx=5)
-        
-        # Status
-        status_frame = ttk.LabelFrame(main_frame, text="Status", padding=10)
-        status_frame.pack(fill="both", expand=True, pady=5)
-        
-        ttk.Label(status_frame, textvariable=app.status_current_file).pack(anchor="w")
-        
-        app.progress_bar = ttk.Progressbar(status_frame, variable=app.progress_value)
-        app.progress_bar.pack(fill="x", pady=5)
-        
-        app.log_text = tk.Text(status_frame, height=10, wrap=tk.WORD, state=tk.DISABLED)
-        app.log_text.pack(fill="both", expand=True)
-        
-        # Initialize placeholder attributes for compatibility
-        app.review_tree = None
-        app.review_file_btn = None
-        app.files_label = ttk.Label(status_frame, text="")
-        
-        print("✅ Minimal GUI created successfully")
-        
-    except Exception as e:
-        print(f"Error creating minimal GUI: {e}")
-        raise
-
-# Test function
-def test_gui_components():
-    """Test GUI components creation"""
-    try:
-        root = tk.Tk()
-        root.title("GUI Components Test")
-        root.geometry("800x600")
-        
-        # Mock app object with required attributes
-        class MockApp:
-            def __init__(self):
-                self.selected_excel = tk.StringVar()
-                self.selected_folder = tk.StringVar()
-                self.status_current_file = tk.StringVar(value="Ready")
-                self.progress_value = tk.DoubleVar(value=0)
-                self.time_remaining_var = tk.StringVar(value="")
-                self.led_status_var = tk.StringVar(value="●")
-                self.count_pass = tk.IntVar(value=0)
-                self.count_fail = tk.IntVar(value=0)
-                self.count_review = tk.IntVar(value=0)
-                self.count_ocr = tk.IntVar(value=0)
-                
-                # Mock icons
-                self.start_icon = None
-                self.browse_icon = None
-                self.pause_icon = None
-                self.stop_icon = None
-                self.rerun_icon = None
-                self.open_icon = None
-                self.patterns_icon = None
-                self.exit_icon = None
-                self.fullscreen_icon = None
-            
-            def browse_excel(self): print("Browse Excel")
-            def browse_folder(self): print("Browse Folder")
-            def browse_files(self): print("Browse Files")
-            def start_processing(self): print("Start Processing")
-            def toggle_pause(self): print("Toggle Pause")
-            def stop_processing(self): print("Stop Processing")
-            def rerun_flagged_job(self): print("Rerun Flagged")
-            def open_result(self): print("Open Result")
-            def open_pattern_manager(self): print("Pattern Manager")
-            def toggle_fullscreen(self): print("Toggle Fullscreen")
-            def on_closing(self): root.quit()
-            def open_review_for_selected_file(self): print("Review Selected")
-        
-        app = MockApp()
-        
-        # Test creating components
-        colors = {"kyocera_red": "#DA291C"}
-        
-        root.columnconfigure(0, weight=1)
-        root.rowconfigure(1, weight=1)
-        
-        create_main_header(root, "26.0.0", colors)
-        
-        main_frame = ttk.Frame(root, padding=20)
-        main_frame.grid(row=1, column=0, sticky="nsew")
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-        
-        create_io_section(main_frame, app)
-        create_process_controls(main_frame, app)
-        create_status_and_log_section(main_frame, app)
-        
-        print("✅ All GUI components created successfully")
-        
-        # Don't run mainloop in test
-        root.destroy()
-        return True
-        
-    except Exception as e:
-        print(f"❌ GUI components test failed: {e}")
-        return False
-
-if __name__ == "__main__":
-    test_gui_components()
-
-# === AUTO-GENERATED MISSING FUNCTIONS ===
-# Functions that might be called by the main application but were missing
-
-def setup_high_contrast_styles(*args, **kwargs):
-    """Setup high contrast styles for accessibility."""
-    print("High contrast styles setup called")
-    return None
-
-def create_button_with_icon(parent, text, command, icon=None, **kwargs):
-    """Helper function to create buttons with optional icons."""
-    try:
-        btn = ttk.Button(parent, text=text, command=command, **kwargs)
-        if icon:
-            btn.config(image=icon, compound="left")
-        return btn
-    except Exception as e:
-        print(f"Error creating button: {e}")
-        return ttk.Button(parent, text=text, command=command)
-
-def setup_window_geometry(window, width=1200, height=900):
-    """Setup window size and positioning."""
-    try:
-        window.geometry(f"{width}x{height}")
-        window.minsize(1000, 800)
-        
-        # Center window on screen
-        window.update_idletasks()
-        x = (window.winfo_screenwidth() // 2) - (width // 2)
-        y = (window.winfo_screenheight() // 2) - (height // 2)
-        window.geometry(f"{width}x{height}+{x}+{y}")
-        
-    except Exception as e:
-        print(f"Error setting up window geometry: {e}")
-
-def configure_grid_weights(parent, rows=None, cols=None):
-    """Configure grid weights for responsive layout."""
-    try:
-        if rows:
-            for i, weight in enumerate(rows):
-                parent.rowconfigure(i, weight=weight)
-        
-        if cols:
-            for i, weight in enumerate(cols):
-                parent.columnconfigure(i, weight=weight)
-                
-    except Exception as e:
-        print(f"Error configuring grid weights: {e}")
-
-def create_separator(parent, orient='horizontal'):
-    """Create a separator widget."""
-    try:
-        return ttk.Separator(parent, orient=orient)
-    except Exception as e:
-        print(f"Error creating separator: {e}")
-        return ttk.Frame(parent, height=2 if orient == 'horizontal' else 2, width=2)
-
-def apply_custom_styling(app, style_config=None):
-    """Apply custom styling to the application."""
-    try:
-        if hasattr(app, 'style') and style_config:
-            # Apply any custom styles if provided
-            pass
-        print("Custom styling applied")
-    except Exception as e:
-        print(f"Error applying custom styles: {e}")
-
-def configure_theme(app, theme_name="default"):
-    """Configure application theme."""
-    try:
-        if hasattr(app, 'style'):
-            available_themes = app.style.theme_names()
-            if theme_name in available_themes:
-                app.style.theme_use(theme_name)
-                print(f"Theme set to: {theme_name}")
-            else:
-                print(f"Theme '{theme_name}' not available. Available: {available_themes}")
-        else:
-            print("No style object available for theming")
-    except Exception as e:
-        print(f"Error configuring theme: {e}")
-
-def create_tooltip(widget, text):
-    """Create a tooltip for a widget (placeholder implementation)."""
-    try:
-        # Basic tooltip implementation
-        def on_enter(event):
-            widget.tooltip = tk.Toplevel()
-            widget.tooltip.wm_overrideredirect(True)
-            widget.tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
-            label = tk.Label(widget.tooltip, text=text, background="yellow")
-            label.pack()
-        
-        def on_leave(event):
-            if hasattr(widget, 'tooltip'):
-                widget.tooltip.destroy()
-                delattr(widget, 'tooltip')
-        
-        widget.bind("<Enter>", on_enter)
-        widget.bind("<Leave>", on_leave)
-        
-    except Exception as e:
-        print(f"Error creating tooltip: {e}")
-
-def update_progress_display(app, current, total, message=""):
-    """Update progress display in the GUI."""
-    try:
-        if hasattr(app, 'progress_value') and total > 0:
-            percent = (current / total) * 100
-            app.progress_value.set(percent)
-        
-        if hasattr(app, 'status_current_file') and message:
-            app.status_current_file.set(message)
-            
-    except Exception as e:
-        print(f"Error updating progress display: {e}")
-
-def show_status_message(app, message, level="info"):
-    """Show a status message in the application."""
-    try:
-        if hasattr(app, 'log_message'):
-            app.log_message(message, level)
-        else:
-            print(f"[{level.upper()}] {message}")
-    except Exception as e:
-        print(f"Error showing status message: {e}")
-
-def reset_ui_state(app):
-    """Reset UI to initial state."""
-    try:
-        # Reset counters
-        for counter in ['count_pass', 'count_fail', 'count_review', 'count_ocr']:
-            if hasattr(app, counter):
-                getattr(app, counter).set(0)
-        
-        # Reset progress
-        if hasattr(app, 'progress_value'):
-            app.progress_value.set(0)
-        
-        # Reset status
-        if hasattr(app, 'status_current_file'):
-            app.status_current_file.set("Ready")
-            
-        print("UI state reset")
-        
-    except Exception as e:
-        print(f"Error resetting UI state: {e}")
-
-def validate_gui_state(app):
-    """Validate that all required GUI components are present."""
-    required_attributes = [
-        'process_btn', 'pause_btn', 'stop_btn', 'log_text',
-        'progress_value', 'status_current_file'
+def create_controls_section(parent, app):
+    """Creates the main control panel section with action buttons and options."""
+    controls_frame = ttk.LabelFrame(parent, text="Controls", padding=10)
+    controls_frame.grid(row=1, column=0, sticky="ew", pady=5)
+    controls_frame.columnconfigure(tuple(range(4)), weight=1)  # 4 equal columns
+    
+    # Main action buttons
+    action_frame = ttk.Frame(controls_frame)
+    action_frame.grid(row=0, column=0, columnspan=4, sticky="ew", pady=(0, 10))
+    action_frame.columnconfigure(0, weight=1)
+    
+    # Create the primary action button (START/STOP)
+    app.primary_action_btn = ttk.Button(
+        action_frame, 
+        text=" START PROCESSING", 
+        image=app.start_icon, 
+        compound="left", 
+        command=app.toggle_processing, 
+        style="Primary.TButton"
+    )
+    app.primary_action_btn.grid(row=0, column=0, sticky="ew")
+    
+    # Secondary action buttons
+    btn_configs = [
+        # Row 1
+        (0, "Pause/Resume", app.pause_icon, app.toggle_pause, tk.DISABLED),
+        (1, "Reset", app.reset_icon, app.reset_processing, tk.NORMAL),
+        (2, "Verify", app.verify_icon, app.verify_files, tk.NORMAL),
+        (3, "Settings", app.settings_icon, app.open_settings, tk.NORMAL),
+        # Row 2
+        (4, "Patterns", app.patterns_icon, app.open_pattern_manager, tk.NORMAL),
+        (5, "Open Output", app.open_icon, app.open_result, tk.DISABLED),
+        (6, "Re-run Flagged", app.rerun_icon, app.rerun_flagged_job, tk.DISABLED),
+        (7, "Exit", app.exit_icon, app.on_closing, tk.NORMAL),
     ]
     
-    missing = []
-    for attr in required_attributes:
-        if not hasattr(app, attr):
-            missing.append(attr)
+    # Create buttons in a 2x4 grid
+    for i, (idx, text, icon, command, state) in enumerate(btn_configs):
+        row, col = divmod(i, 4)
+        btn = ttk.Button(
+            controls_frame,
+            text=f" {text}",
+            image=icon,
+            compound="left",
+            command=command,
+            state=state
+        )
+        btn.grid(row=row+1, column=col, sticky="ew", padx=2, pady=2)
+        
+        # Store references to buttons we need to control later
+        if text == "Pause/Resume":
+            app.pause_btn = btn
+        elif text == "Open Output":
+            app.open_result_btn = btn
+        elif text == "Re-run Flagged":
+            app.rerun_btn = btn
+        elif text == "Exit":
+            app.exit_btn = btn
     
-    if missing:
-        print(f"Warning: Missing GUI attributes: {missing}")
-        return False
+    # Advanced options section
+    options_frame = ttk.LabelFrame(controls_frame, text="Options", padding=5)
+    options_frame.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(10, 0))
+    options_frame.columnconfigure(1, weight=1)
     
-    return True
-
-
-# === COMPREHENSIVE BACKWARD COMPATIBILITY ALIASES ===
-# These handle various naming conventions that might be used
-
-# Main layout functions
-def create_controls_section(parent, app):
-    """Alias for create_process_controls."""
-    return create_process_controls(parent, app)
-
-def create_main_controls(parent, app):
-    """Alias for create_process_controls."""
-    return create_process_controls(parent, app)
-
-def create_control_panel(parent, app):
-    """Alias for create_process_controls."""
-    return create_process_controls(parent, app)
-
-def create_button_section(parent, app):
-    """Alias for create_process_controls."""
-    return create_process_controls(parent, app)
-
-def create_status_section(parent, app):
-    """Alias for create_status_and_log_section."""
-    return create_status_and_log_section(parent, app)
-
-def create_log_section(parent, app):
-    """Alias for create_status_and_log_section."""
-    return create_status_and_log_section(parent, app)
-
-def create_progress_section(parent, app):
-    """Alias for create_status_and_log_section."""
-    return create_status_and_log_section(parent, app)
-
-def create_monitoring_section(parent, app):
-    """Alias for create_status_and_log_section."""
-    return create_status_and_log_section(parent, app)
-
-def create_input_section(parent, app):
-    """Alias for create_io_section."""
-    return create_io_section(parent, app)
-
-def create_file_section(parent, app):
-    """Alias for create_io_section."""
-    return create_io_section(parent, app)
-
-def create_selection_section(parent, app):
-    """Alias for create_io_section."""
-    return create_io_section(parent, app)
-
-def create_io_controls(parent, app):
-    """Alias for create_io_section."""
-    return create_io_section(parent, app)
-
-def create_header_section(parent, version, colors=None):
-    """Alias for create_main_header."""
-    return create_main_header(parent, version, colors)
-
-def create_title_section(parent, version, colors=None):
-    """Alias for create_main_header."""
-    return create_main_header(parent, version, colors)
-
-def create_banner(parent, version, colors=None):
-    """Alias for create_main_header."""
-    return create_main_header(parent, version, colors)
-
-def setup_header(parent, version, colors=None):
-    """Alias for create_main_header."""
-    return create_main_header(parent, version, colors)
-
-# Layout setup functions
-def setup_main_layout(parent, app, version, colors=None):
-    """Complete layout setup."""
-    try:
-        if colors is None:
-            from config import BRAND_COLORS
-            colors = BRAND_COLORS
-        
-        parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(1, weight=1)
-        
-        create_main_header(parent, version, colors)
-        
-        main_frame = ttk.Frame(parent, padding=20)
-        main_frame.grid(row=1, column=0, sticky="nsew")
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-        
-        create_io_section(main_frame, app)
-        create_process_controls(main_frame, app)
-        create_status_and_log_section(main_frame, app)
-        
-        return True
-    except Exception as e:
-        print(f"Error in setup_main_layout: {e}")
-        return False
-
-def setup_gui_layout(parent, app, version, colors=None):
-    """Alias for setup_main_layout."""
-    return setup_main_layout(parent, app, version, colors)
-
-def create_main_interface(parent, app, version, colors=None):
-    """Alias for setup_main_layout."""
-    return setup_main_layout(parent, app, version, colors)
-
-def build_gui(parent, app, version, colors=None):
-    """Alias for setup_main_layout."""
-    return setup_main_layout(parent, app, version, colors)
-
-# Style and theming functions
-def setup_high_contrast_styles(*args, **kwargs):
-    """Setup high contrast styles."""
-    print("High contrast styles setup called")
-    return None
-
-def apply_theme(app, theme_name="default"):
-    """Apply theme to application."""
-    try:
-        if hasattr(app, 'style'):
-            app.style.theme_use(theme_name)
-    except Exception as e:
-        print(f"Error applying theme: {e}")
-
-def configure_styles(app):
-    """Configure application styles."""
-    try:
-        if hasattr(app, '_configure_styles'):
-            app._configure_styles()
-    except Exception as e:
-        print(f"Error configuring styles: {e}")
-
-def setup_colors(app, colors=None):
-    """Setup application colors."""
-    try:
-        if colors and hasattr(app, 'brand_colors'):
-            app.brand_colors = colors
-    except Exception as e:
-        print(f"Error setting up colors: {e}")
-
-# Utility functions
-def create_labeled_entry(parent, label_text, textvariable, **kwargs):
-    """Create a labeled entry widget."""
-    try:
-        frame = ttk.Frame(parent)
-        ttk.Label(frame, text=label_text).pack(side="left")
-        entry = ttk.Entry(frame, textvariable=textvariable, **kwargs)
-        entry.pack(side="left", fill="x", expand=True)
-        return frame, entry
-    except Exception as e:
-        print(f"Error creating labeled entry: {e}")
-        return None, None
-
-def create_button_with_icon(parent, text, command, icon=None, **kwargs):
-    """Create button with optional icon."""
-    try:
-        btn = ttk.Button(parent, text=text, command=command, **kwargs)
-        if icon:
-            btn.config(image=icon, compound="left")
-        return btn
-    except Exception as e:
-        print(f"Error creating button: {e}")
-        return ttk.Button(parent, text=text, command=command)
-
-def add_tooltip(widget, text):
-    """Add tooltip to widget."""
-    try:
-        # Simple tooltip implementation
-        def on_enter(event):
-            tooltip = tk.Toplevel()
-            tooltip.wm_overrideredirect(True)
-            tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
-            label = tk.Label(tooltip, text=text, background="yellow")
-            label.pack()
-            widget.tooltip = tooltip
-        
-        def on_leave(event):
-            if hasattr(widget, 'tooltip'):
-                widget.tooltip.destroy()
-                delattr(widget, 'tooltip')
-        
-        widget.bind("<Enter>", on_enter)
-        widget.bind("<Leave>", on_leave)
-    except Exception as e:
-        print(f"Error adding tooltip: {e}")
-
-# Grid and layout utilities
-def configure_grid_weights(parent, rows=None, cols=None):
-    """Configure grid weights for responsive layout."""
-    try:
-        if rows:
-            for i, weight in enumerate(rows):
-                parent.rowconfigure(i, weight=weight)
-        if cols:
-            for i, weight in enumerate(cols):
-                parent.columnconfigure(i, weight=weight)
-    except Exception as e:
-        print(f"Error configuring grid weights: {e}")
-
-def create_separator(parent, orient='horizontal'):
-    """Create separator widget."""
-    try:
-        return ttk.Separator(parent, orient=orient)
-    except Exception as e:
-        print(f"Error creating separator: {e}")
-        return ttk.Frame(parent, height=2, width=2)
-
-# Window management
-def setup_window_geometry(window, width=1200, height=900):
-    """Setup window size and positioning."""
-    try:
-        window.geometry(f"{width}x{height}")
-        window.minsize(1000, 800)
-        
-        # Center window
-        window.update_idletasks()
-        x = (window.winfo_screenwidth() // 2) - (width // 2)
-        y = (window.winfo_screenheight() // 2) - (height // 2)
-        window.geometry(f"{width}x{height}+{x}+{y}")
-    except Exception as e:
-        print(f"Error setting up window geometry: {e}")
-
-def center_window(window):
-    """Center window on screen."""
-    try:
-        window.update_idletasks()
-        x = (window.winfo_screenwidth() // 2) - (window.winfo_width() // 2)
-        y = (window.winfo_screenheight() // 2) - (window.winfo_height() // 2)
-        window.geometry(f"+{x}+{y}")
-    except Exception as e:
-        print(f"Error centering window: {e}")
-
-# Validation and error handling
-def validate_gui_components(app):
-    """Validate that required GUI components exist."""
-    required = ['process_btn', 'log_text', 'progress_value', 'status_current_file']
-    missing = [attr for attr in required if not hasattr(app, attr)]
+    # Create checkboxes for options
+    app.use_ocr_var = tk.BooleanVar(value=True)
+    app.use_ai_var = tk.BooleanVar(value=True)
+    app.skip_cached_var = tk.BooleanVar(value=True)
     
-    if missing:
-        print(f"Warning: Missing GUI components: {missing}")
-        return False
-    return True
+    ttk.Checkbutton(
+        options_frame, 
+        text="Use OCR for scanned documents", 
+        variable=app.use_ocr_var
+    ).grid(row=0, column=0, sticky="w", padx=5)
+    
+    ttk.Checkbutton(
+        options_frame, 
+        text="Use AI extraction", 
+        variable=app.use_ai_var
+    ).grid(row=0, column=1, sticky="w", padx=5)
+    
+    ttk.Checkbutton(
+        options_frame, 
+        text="Skip previously cached files", 
+        variable=app.skip_cached_var
+    ).grid(row=1, column=0, sticky="w", padx=5)
+    
+    return controls_frame
 
-def safe_widget_config(widget, **kwargs):
-    """Safely configure widget properties."""
-    try:
-        widget.config(**kwargs)
-        return True
-    except Exception as e:
-        print(f"Error configuring widget: {e}")
-        return False
+def create_status_and_log_section(parent, app):
+    stat = ttk.LabelFrame(parent, text="3. Status & Logs", padding=10)
+    stat.grid(row=2, column=0, sticky="nsew", pady=5)
+    stat.columnconfigure(0, weight=1)
+    stat.rowconfigure(4, weight=1)
 
-def safe_grid_widget(widget, **kwargs):
-    """Safely grid a widget."""
-    try:
-        widget.grid(**kwargs)
-        return True
-    except Exception as e:
-        print(f"Error gridding widget: {e}")
-        return False
+    app.status_frame = ttk.Frame(stat, style="Status.TFrame", padding=5)
+    app.status_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=2)
+    app.status_frame.columnconfigure(1, weight=1)
+    app.led_label = ttk.Label(app.status_frame, textvariable=app.led_status_var, style="LED.TLabel")
+    app.led_label.grid(row=0, column=0, sticky="w")
+    ttk.Label(app.status_frame, textvariable=app.status_current_file, style="Status.TLabel").grid(row=0, column=1, sticky="ew", padx=5)
 
-def safe_pack_widget(widget, **kwargs):
-    """Safely pack a widget."""
-    try:
-        widget.pack(**kwargs)
-        return True
-    except Exception as e:
-        print(f"Error packing widget: {e}")
-        return False
+    prog_frame = ttk.Frame(stat)
+    prog_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=(5,10))
+    prog_frame.columnconfigure(0, weight=1)
+    app.progress_bar = ttk.Progressbar(prog_frame, variable=app.progress_value, style="Blue.Horizontal.TProgressbar")
+    app.progress_bar.grid(row=0, column=0, sticky="ew")
+    ttk.Label(prog_frame, textvariable=app.time_remaining_var).grid(row=0, column=1, sticky="e", padx=10)
 
-# Event handling utilities
-def bind_events(app):
-    """Bind common application events."""
-    try:
-        if hasattr(app, 'bind_all'):
-            app.bind_all("<Control-q>", lambda e: app.quit())
-            app.bind_all("<F11>", lambda e: getattr(app, 'toggle_fullscreen', lambda: None)())
-    except Exception as e:
-        print(f"Error binding events: {e}")
+    sum_frame = ttk.Frame(stat)
+    sum_frame.grid(row=2, column=0, sticky="ew", padx=5, pady=2)
+    counters = [("Pass:", app.count_pass, "Green"), ("Fail:", app.count_fail, "Red"), ("Review:", app.count_review, "Orange"), ("OCR:", app.count_ocr, "Blue")]
+    for i, (text, var, color) in enumerate(counters):
+        ttk.Label(sum_frame, text=text, style="Status.Header.TLabel").pack(side="left", padx=(15, 2))
+        ttk.Label(sum_frame, textvariable=var, style=f"Count.{color}.TLabel").pack(side="left")
 
-def setup_keyboard_shortcuts(app):
-    """Setup keyboard shortcuts."""
-    try:
-        shortcuts = {
-            "<Control-o>": "browse_excel",
-            "<Control-f>": "browse_folder", 
-            "<Control-s>": "start_processing",
-            "<Escape>": "stop_processing"
-        }
-        
-        for key, method_name in shortcuts.items():
-            method = getattr(app, method_name, None)
-            if method:
-                app.bind_all(key, lambda e, m=method: m())
-    except Exception as e:
-        print(f"Error setting up keyboard shortcuts: {e}")
+    rev_frame = ttk.Frame(stat)
+    rev_frame.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
+    rev_frame.rowconfigure(1, weight=1)
+    rev_frame.columnconfigure(0, weight=1)
+    ttk.Label(rev_frame, text="Files to Review:", style="Status.Header.TLabel").grid(row=0, column=0, sticky="w")
+    app.review_file_btn = ttk.Button(rev_frame, text="Review Selected", command=app.open_review_for_selected_file, state=tk.DISABLED)
+    app.review_file_btn.grid(row=0, column=1, sticky="e")
+    app.review_tree = ttk.Treeview(rev_frame, columns=('file'), show='headings', height=4)
+    app.review_tree.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=2)
+    app.review_tree.heading('file', text='File Name')
+    app.review_tree.bind("<<TreeviewSelect>>", lambda e: app.review_file_btn.config(state=tk.NORMAL))
 
-# Progress and status utilities
-def update_progress(app, current, total, message=""):
-    """Update progress display."""
-    try:
-        if hasattr(app, 'progress_value') and total > 0:
-            app.progress_value.set((current / total) * 100)
-        if hasattr(app, 'status_current_file') and message:
-            app.status_current_file.set(message)
-    except Exception as e:
-        print(f"Error updating progress: {e}")
+    log_frame = ttk.Frame(stat)
+    log_frame.grid(row=4, column=0, sticky="nsew", padx=5, pady=(10,2))
+    log_frame.rowconfigure(0, weight=1)
+    log_frame.columnconfigure(0, weight=1)
+    app.log_text = tk.Text(log_frame, height=8, wrap=tk.WORD, state=tk.DISABLED, relief="solid", borderwidth=1, font=("Consolas", 9))
+    app.log_text.grid(row=0, column=0, sticky="nsew")
+    log_scroll = ttk.Scrollbar(log_frame, command=app.log_text.yview)
+    log_scroll.grid(row=0, column=1, sticky="ns")
+    app.log_text.config(yscrollcommand=log_scroll.set)
 
-def reset_progress(app):
-    """Reset progress display."""
-    try:
-        if hasattr(app, 'progress_value'):
-            app.progress_value.set(0)
-        if hasattr(app, 'status_current_file'):
-            app.status_current_file.set("Ready")
-    except Exception as e:
-        print(f"Error resetting progress: {e}")
+def create_live_status_section(parent, app):
+    """Creates a real-time status display panel for monitoring processing."""
+    status_frame = ttk.LabelFrame(parent, text="Live Status", padding=10)
+    status_frame.grid(row=0, column=1, rowspan=3, sticky="nsew", padx=(10, 0))
+    status_frame.columnconfigure(0, weight=1)
+    status_frame.rowconfigure(3, weight=1)
+    
+    # Current operation display
+    op_frame = ttk.Frame(status_frame, padding=5)
+    op_frame.grid(row=0, column=0, sticky="ew", pady=5)
+    op_frame.columnconfigure(1, weight=1)
+    
+    ttk.Label(op_frame, text="Operation:", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+    app.live_operation = tk.StringVar(value="Idle")
+    ttk.Label(op_frame, textvariable=app.live_operation, foreground="#0078D4").grid(row=0, column=1, sticky="w", padx=5)
+    
+    # Current file display
+    file_frame = ttk.Frame(status_frame, padding=5)
+    file_frame.grid(row=1, column=0, sticky="ew", pady=5)
+    file_frame.columnconfigure(1, weight=1)
+    
+    ttk.Label(file_frame, text="Processing:", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, sticky="w")
+    app.live_filename = tk.StringVar(value="No file selected")
+    ttk.Label(file_frame, textvariable=app.live_filename).grid(row=0, column=1, sticky="w", padx=5)
+    
+    # Performance metrics
+    perf_frame = ttk.LabelFrame(status_frame, text="Performance", padding=5)
+    perf_frame.grid(row=2, column=0, sticky="ew", pady=5)
+    perf_frame.columnconfigure(1, weight=1)
+    
+    # Create StringVars for metrics first (fixed the syntax error)
+    app.live_rate_var = tk.StringVar(value="0")
+    app.live_avg_time = tk.StringVar(value="0 sec")
+    app.live_memory = tk.StringVar(value="0 MB")
+    
+    metrics = [
+        ("Files/min:", app.live_rate_var),
+        ("Avg time/file:", app.live_avg_time),
+        ("Memory usage:", app.live_memory)
+    ]
+    
+    for i, (label, var) in enumerate(metrics):
+        ttk.Label(perf_frame, text=label, font=("Segoe UI", 9, "bold")).grid(row=i, column=0, sticky="w", pady=2)
+        ttk.Label(perf_frame, textvariable=var).grid(row=i, column=1, sticky="w", padx=5, pady=2)
+    
+    # Mini log display - shows last few operations
+    mini_log_frame = ttk.LabelFrame(status_frame, text="Recent Activity", padding=5)
+    mini_log_frame.grid(row=3, column=0, sticky="nsew", pady=5)
+    mini_log_frame.columnconfigure(0, weight=1)
+    mini_log_frame.rowconfigure(0, weight=1)
+    
+    app.mini_log = tk.Text(mini_log_frame, height=8, width=30, wrap=tk.WORD, font=("Consolas", 8))
+    app.mini_log.grid(row=0, column=0, sticky="nsew")
+    mini_scroll = ttk.Scrollbar(mini_log_frame, command=app.mini_log.yview)
+    mini_scroll.grid(row=0, column=1, sticky="ns")
+    app.mini_log.config(yscrollcommand=mini_scroll.set, state=tk.DISABLED)
+    
+    # Configure tag for timestamps
+    app.mini_log.tag_configure("timestamp", foreground="gray")
+    
+    return status_frame
 
-# === END COMPREHENSIVE BACKWARD COMPATIBILITY ===
+# ADD THIS NEW FUNCTION
+def create_review_tab(parent, app):
+    """Creates a tab for reviewing and editing files that need attention."""
+    review_frame = ttk.Frame(parent)
+    
+    # Split frame into left and right panels
+    paned_window = ttk.PanedWindow(review_frame, orient=tk.HORIZONTAL)
+    paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    
+    # Left panel - File list with filters
+    left_panel = ttk.Frame(paned_window)
+    left_panel.columnconfigure(0, weight=1)
+    left_panel.rowconfigure(2, weight=1)
+    paned_window.add(left_panel, weight=1)
+    
+    # Search and filter controls
+    filter_frame = ttk.Frame(left_panel)
+    filter_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+    filter_frame.columnconfigure(1, weight=1)
+    
+    ttk.Label(filter_frame, text="Search:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+    app.review_search_var = tk.StringVar()
+    search_entry = ttk.Entry(filter_frame, textvariable=app.review_search_var)
+    search_entry.grid(row=0, column=1, sticky="ew")
+    search_entry.bind("<KeyRelease>", app.filter_review_files)
+    
+    # Filter options
+    filter_options_frame = ttk.Frame(left_panel)
+    filter_options_frame.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+    
+    # Create filter variables if they don't exist
+    app.show_all_files_var = tk.BooleanVar(value=True)
+    app.show_needs_review_var = tk.BooleanVar(value=True)
+    app.show_ocr_files_var = tk.BooleanVar(value=True)
+    app.show_failed_var = tk.BooleanVar(value=True)
+    
+    filters = [
+        ("Show all files", app.show_all_files_var, app.toggle_all_files),
+        ("Needs review", app.show_needs_review_var, app.filter_review_files),
+        ("OCR processed", app.show_ocr_files_var, app.filter_review_files),
+        ("Failed", app.show_failed_var, app.filter_review_files)
+    ]
+    
+    for i, (text, var, command) in enumerate(filters):
+        ttk.Checkbutton(
+            filter_options_frame, 
+            text=text,
+            variable=var,
+            command=command
+        ).grid(row=i//2, column=i%2, sticky="w", padx=5, pady=2)
+    
+    # File list with columns for status, filename, and reason
+    columns = ("status", "filename", "reason")
+    app.review_files_tree = ttk.Treeview(left_panel, columns=columns, show="headings", selectmode="browse")
+    app.review_files_tree.grid(row=2, column=0, sticky="nsew")
+    
+    # Configure columns and headings
+    app.review_files_tree.column("status", width=30, anchor="center")
+    app.review_files_tree.column("filename", width=200)
+    app.review_files_tree.column("reason", width=100)
+    
+    app.review_files_tree.heading("status", text="")
+    app.review_files_tree.heading("filename", text="Filename")
+    app.review_files_tree.heading("reason", text="Status")
+    
+    # Scrollbar for file list
+    files_scroll = ttk.Scrollbar(left_panel, orient="vertical", command=app.review_files_tree.yview)
+    files_scroll.grid(row=2, column=1, sticky="ns")
+    app.review_files_tree.configure(yscrollcommand=files_scroll.set)
+    
+    # Action buttons under file list
+    action_frame = ttk.Frame(left_panel)
+    action_frame.grid(row=3, column=0, sticky="ew", pady=(10, 0))
+    
+    ttk.Button(
+        action_frame,
+        text="Open File",
+        command=app.open_selected_review_file
+    ).pack(side="left", padx=(0, 5))
+    
+    ttk.Button(
+        action_frame,
+        text="Process Selected",
+        command=app.process_selected_review_file
+    ).pack(side="left", padx=5)
+    
+    ttk.Button(
+        action_frame,
+        text="Process All",
+        command=app.process_all_review_files
+    ).pack(side="left", padx=5)
+    
+    # Right panel - File content and editing
+    right_panel = ttk.Frame(paned_window)
+    right_panel.columnconfigure(0, weight=1)
+    right_panel.rowconfigure(1, weight=1)
+    paned_window.add(right_panel, weight=2)
+    
+    # File details header
+    details_header = ttk.Frame(right_panel)
+    details_header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+    details_header.columnconfigure(1, weight=1)
+    
+    ttk.Label(details_header, text="File Details", font=("Segoe UI", 12, "bold")).grid(
+        row=0, column=0, sticky="w"
+    )
+    
+    app.review_current_file_var = tk.StringVar(value="No file selected")
+    ttk.Label(details_header, textvariable=app.review_current_file_var).grid(
+        row=0, column=1, sticky="e"
+    )
+    
+    # Notebook for different views of the file
+    app.review_notebook = ttk.Notebook(right_panel)
+    app.review_notebook.grid(row=1, column=0, sticky="nsew")
+    
+    # Text view tab
+    text_frame = ttk.Frame(app.review_notebook)
+    app.review_notebook.add(text_frame, text="Text View")
+    text_frame.columnconfigure(0, weight=1)
+    text_frame.rowconfigure(0, weight=1)
+    
+    app.review_text = tk.Text(text_frame, wrap="word", font=("Consolas", 10))
+    app.review_text.grid(row=0, column=0, sticky="nsew")
+    text_scroll = ttk.Scrollbar(text_frame, orient="vertical", command=app.review_text.yview)
+    text_scroll.grid(row=0, column=1, sticky="ns")
+    app.review_text.config(yscrollcommand=text_scroll.set)
+    
+    # Patterns tab
+    patterns_frame = ttk.Frame(app.review_notebook)
+    app.review_notebook.add(patterns_frame, text="Patterns")
+    patterns_frame.columnconfigure(0, weight=1)
+    patterns_frame.rowconfigure(1, weight=1)
+    
+    patterns_header = ttk.Frame(patterns_frame)
+    patterns_header.grid(row=0, column=0, sticky="ew", pady=(5, 10))
+    patterns_header.columnconfigure(2, weight=1)
+    
+    ttk.Label(patterns_header, text="Pattern Type:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+    
+    app.pattern_type_var = tk.StringVar(value="Model Patterns")
+    pattern_types = ["Model Patterns", "QA Number Patterns"]
+    pattern_combo = ttk.Combobox(patterns_header, textvariable=app.pattern_type_var, values=pattern_types, state="readonly")
+    pattern_combo.grid(row=0, column=1, sticky="w", padx=5)
+    pattern_combo.bind("<<ComboboxSelected>>", app.load_patterns)
+    
+    ttk.Button(
+        patterns_header, 
+        text="Test Selected Pattern",
+        command=app.test_selected_pattern
+    ).grid(row=0, column=2, sticky="e")
+    
+    # Pattern list on the left, preview on the right
+    patterns_paned = ttk.PanedWindow(patterns_frame, orient=tk.HORIZONTAL)
+    patterns_paned.grid(row=1, column=0, sticky="nsew")
+    
+    # Left side - pattern list
+    pattern_list_frame = ttk.Frame(patterns_paned)
+    pattern_list_frame.columnconfigure(0, weight=1)
+    pattern_list_frame.rowconfigure(0, weight=1)
+    patterns_paned.add(pattern_list_frame, weight=1)
+    
+    app.patterns_listbox = tk.Listbox(pattern_list_frame, font=("Consolas", 10))
+    app.patterns_listbox.grid(row=0, column=0, sticky="nsew")
+    patterns_scroll = ttk.Scrollbar(pattern_list_frame, orient="vertical", command=app.patterns_listbox.yview)
+    patterns_scroll.grid(row=0, column=1, sticky="ns")
+    app.patterns_listbox.config(yscrollcommand=patterns_scroll.set)
+    
+    pattern_button_frame = ttk.Frame(pattern_list_frame)
+    pattern_button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(5, 0))
+    
+    ttk.Button(
+        pattern_button_frame,
+        text="Add New",
+        command=app.add_new_pattern
+    ).pack(side="left", padx=(0, 5))
+    
+    ttk.Button(
+        pattern_button_frame,
+        text="Edit",
+        command=app.edit_pattern
+    ).pack(side="left", padx=5)
+    
+    ttk.Button(
+        pattern_button_frame,
+        text="Remove",
+        command=app.remove_pattern
+    ).pack(side="left", padx=5)
+    
+    # Right side - pattern test area
+    pattern_test_frame = ttk.Frame(patterns_paned)
+    pattern_test_frame.columnconfigure(0, weight=1)
+    pattern_test_frame.rowconfigure(1, weight=1)
+    patterns_paned.add(pattern_test_frame, weight=2)
+    
+    ttk.Label(pattern_test_frame, text="Pattern Test Area").grid(row=0, column=0, sticky="w", pady=(0, 5))
+    
+    app.pattern_test_text = tk.Text(pattern_test_frame, wrap="word", font=("Consolas", 10))
+    app.pattern_test_text.grid(row=1, column=0, sticky="nsew")
+    test_scroll = ttk.Scrollbar(pattern_test_frame, orient="vertical", command=app.pattern_test_text.yview)
+    test_scroll.grid(row=1, column=1, sticky="ns")
+    app.pattern_test_text.config(yscrollcommand=test_scroll.set)
+    
+    # Configure highlighting tags
+    app.pattern_test_text.tag_configure("match", background="yellow")
+    
+    # Metadata tab
+    metadata_frame = ttk.Frame(app.review_notebook)
+    app.review_notebook.add(metadata_frame, text="Metadata")
+    metadata_frame.columnconfigure(1, weight=1)
+    
+    # File information fields
+    metadata_fields = [
+        ("Filename:", app.meta_filename_var := tk.StringVar()),
+        ("File Size:", app.meta_size_var := tk.StringVar()),
+        ("Last Modified:", app.meta_modified_var := tk.StringVar()),
+        ("Status:", app.meta_status_var := tk.StringVar()),
+        ("Processed On:", app.meta_processed_var := tk.StringVar()),
+        ("OCR Used:", app.meta_ocr_var := tk.StringVar()),
+        ("Model Number:", app.meta_model_var := tk.StringVar()),
+        ("QA Number:", app.meta_qa_var := tk.StringVar()),
+        ("Author:", app.meta_author_var := tk.StringVar())
+    ]
+    
+    for i, (label_text, var) in enumerate(metadata_fields):
+        ttk.Label(metadata_frame, text=label_text, font=("Segoe UI", 10, "bold")).grid(
+            row=i, column=0, sticky="w", padx=(10, 5), pady=5
+        )
+        ttk.Label(metadata_frame, textvariable=var).grid(
+            row=i, column=1, sticky="w", padx=5, pady=5
+        )
+    
+    # Actions at the bottom of the metadata tab
+    meta_actions_frame = ttk.Frame(metadata_frame)
+    meta_actions_frame.grid(row=len(metadata_fields), column=0, columnspan=2, sticky="ew", pady=(15, 0))
+    
+    ttk.Button(
+        meta_actions_frame,
+        text="Edit Metadata",
+        command=app.edit_metadata
+    ).pack(side="left", padx=(0, 5))
+    
+    ttk.Button(
+        meta_actions_frame,
+        text="Apply Changes",
+        command=app.apply_metadata_changes
+    ).pack(side="left", padx=5)
+    
+    ttk.Button(
+        meta_actions_frame,
+        text="Revert Changes",
+        command=app.revert_metadata_changes
+    ).pack(side="left", padx=5)
+    
+    # Bind events
+    app.review_files_tree.bind("<<TreeviewSelect>>", app.on_review_file_select)
+    app.patterns_listbox.bind("<<ListboxSelect>>", app.on_pattern_select)
+    
+    return review_frame
+
+def create_footer(parent, app, version, colors):
+    """Creates the footer section with app info and status."""
+    footer_frame = ttk.Frame(parent, style="Footer.TFrame")
+    footer_frame.grid(row=99, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+    
+    # Add separator line above footer
+    ttk.Separator(footer_frame, orient="horizontal").pack(fill="x", pady=2)
+    
+    # Create main footer content area
+    content_frame = ttk.Frame(footer_frame)
+    content_frame.pack(fill="x", expand=True, padx=10, pady=5)
+    content_frame.columnconfigure(1, weight=1)
+    
+    # Version and copyright info on the left
+    info_frame = ttk.Frame(content_frame)
+    info_frame.grid(row=0, column=0, sticky="w")
+    
+    version_label = ttk.Label(
+        info_frame, 
+        text=f"KYO QA Tool v{version}", 
+        font=("Segoe UI", 8)
+    )
+    version_label.pack(side="left", padx=(0, 15))
+    
+    copyright_label = ttk.Label(
+        info_frame, 
+        text="© 2024-2025 Kyocera - All Rights Reserved", 
+        font=("Segoe UI", 8)
+    )
+    copyright_label.pack(side="left")
+    
+    # Status info on the right
+    status_frame = ttk.Frame(content_frame)
+    status_frame.grid(row=0, column=1, sticky="e")
+    
+    # Create status variables if they don't exist yet
+    if not hasattr(app, "footer_status_var"):
+        app.footer_status_var = tk.StringVar(value="Ready")
+    
+    if not hasattr(app, "footer_memory_var"):
+        app.footer_memory_var = tk.StringVar(value="Memory: 0 MB")
+    
+    # Status indicators
+    ttk.Label(status_frame, text="Status:", font=("Segoe UI", 8, "bold")).pack(side="left")
+    ttk.Label(status_frame, textvariable=app.footer_status_var).pack(side="left", padx=(2, 15))
+    
+    ttk.Label(status_frame, textvariable=app.footer_memory_var, font=("Segoe UI", 8)).pack(side="left")
+    
+    return footer_frame
+
+def setup_high_contrast_styles(style, colors=None):
+    """
+    Configure high-contrast theme styles for accessibility.
+    
+    Args:
+        style: ttk.Style object to configure
+        colors: Optional dictionary of colors to use, if None uses default high contrast
+    """
+    # Default high contrast color scheme
+    high_contrast = {
+        "background": "#000000",
+        "foreground": "#FFFFFF",
+        "accent": "#FFFF00",  # Yellow for highlights
+        "button": "#000080",  # Navy for buttons
+        "button_fg": "#FFFFFF",
+        "success": "#00FF00",  # Bright green
+        "warning": "#FFFF00",  # Yellow
+        "error": "#FF0000",   # Bright red
+        "highlight": "#FFFF00" # Yellow for selections
+    }
+    
+    # Override with any colors provided
+    if colors:
+        for key, value in colors.items():
+            if key in high_contrast:
+                high_contrast[key] = value
+    
+    # Configure base styles
+    style.configure("HighContrast.TFrame", background=high_contrast["background"])
+    style.configure("HighContrast.TLabel", 
+                    background=high_contrast["background"], 
+                    foreground=high_contrast["foreground"])
+    
+    # Buttons
+    style.configure("HighContrast.TButton", 
+                    background=high_contrast["button"],
+                    foreground=high_contrast["button_fg"],
+                    focuscolor=high_contrast["accent"])
+    
+    # Entry fields
+    style.configure("HighContrast.TEntry",
+                    fieldbackground=high_contrast["background"],
+                    foreground=high_contrast["foreground"],
+                    insertcolor=high_contrast["foreground"])
+    
+    # Progress bar
+    style.configure("HighContrast.Horizontal.TProgressbar",
+                    background=high_contrast["accent"],
+                    troughcolor=high_contrast["background"])
+    
+    # Treeview
+    style.configure("HighContrast.Treeview",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["foreground"],
+                    fieldbackground=high_contrast["background"])
+    
+    style.configure("HighContrast.Treeview.Heading",
+                    background=high_contrast["button"],
+                    foreground=high_contrast["button_fg"])
+    
+    # LabelFrame
+    style.configure("HighContrast.TLabelframe",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["foreground"],
+                    labeloutside=True)
+    
+    style.configure("HighContrast.TLabelframe.Label",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["foreground"],
+                    font=("Segoe UI", 11, "bold"))
+    
+    # Status indicators
+    style.configure("HighContrast.Success.TLabel",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["success"])
+    
+    style.configure("HighContrast.Warning.TLabel",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["warning"])
+    
+    style.configure("HighContrast.Error.TLabel",
+                    background=high_contrast["background"],
+                    foreground=high_contrast["error"])
+    
+    # Status frame
+    style.configure("HighContrast.Status.TFrame",
+                    background=high_contrast["button"],
+                    relief="sunken")
+    
+    style.configure("HighContrast.Status.TLabel",
+                    background=high_contrast["button"],
+                    foreground=high_contrast["button_fg"])
+    
+    return style
